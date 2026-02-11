@@ -1,7 +1,9 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public InputActionAsset InputActions;
     public float speed = 10f;
     public float turnSpeed = 100f;
 
