@@ -3,55 +3,116 @@ using UnityEngine.InputSystem;
 
 public class TankController : MonoBehaviour
 {
-    public InputActionAsset InputActions;
-    
-    private InputAction moveAction;
-    private InputAction aimAction;
-    
-    private Vector2 moveAmount;
-    private Vector2 aimAmount;
-    private Rigidbody rb;
+    //Private variable to grab character controller
+    private CharacterController controller;
 
-    public float speed = 100;
-    public float rotateSpeed = 10;
+    //To place tank turrents to array for cycling
+    public Transform[] turrets = new Transform[3];
 
-/*
-    private void OnEnable()
+    //Private variable to set current turrent
+    private int turretIndex = 0;
+    private Transform activeTurret;
+
+    //Variables that move tank or apply gravity, helps simulate physics
+    public float maxSpeed;                 
+    public float accelerationTime;          
+    public float decelerationTime;          
+    public float backwardMultiplier;       
+    public float rotationSpeed;            
+    public float gravity;   
+
+
+    //Private variables that help with velocity of tank, and direction
+    private Vector2 moveInput;                     
+    private Vector3 currentVelocity = Vector3.zero;
+    private float verticalVelocity = 0f;
+    private Vector3 currentVelocityV = Vector3.zero; 
+
+    void Awake()
     {
-        InputActions.FindAction("Tanks").Enable();
+        controller = GetComponent<CharacterController>();
+
+        SwitchToTurret(turretIndex);
     }
 
-    private void OnDisable()
+    public void OnMove(InputAction.CallbackContext context)
     {
-        InputActions.FindAction("Tanks").Disable();
-    }
-*/
-    private void Awake()
-    {
-        moveAction = InputSystem.actions.FindAction("Move");
-        aimAction = InputSystem.actions.FindAction("Aim");
-
-        rb = GetComponent<Rigidbody>();
+        moveInput = context.ReadValue<Vector2>();
     }
 
-    private void Update()
+    public void OnCycleTurret(InputAction.CallbackContext context)
     {
-        moveAmount = moveAction.ReadValue<Vector2>();
-        aimAmount = aimAction.ReadValue<Vector2>();
+        if (context.performed)  // On press only
+        {
+            turretIndex = (turretIndex + 1) % 3;  // Cycle 0→1→2→0
+            SwitchToTurret(turretIndex);
+        }
     }
 
-    private void FixedUpdate()
+    void Update()
     {
-        Move();
-        //Aim();
+        HandleMovement();
     }
 
-    private void Move()
+    void HandleMovement()
     {
-       rb.MovePosition(rb.position+transform.forward*moveAmount.y*speed*Time.deltaTime); 
-    
-        float rotAmount = moveAmount.x * rotateSpeed*Time.deltaTime;
-        Quaternion delataRot = Quaternion.Euler(0,rotAmount,0);
-        rb.MoveRotation(rb.rotation * delataRot);
-    }   
+        //Rotates tank
+        float turnInput = moveInput.x;
+        if (Mathf.Abs(turnInput) > 0.01f)
+        {
+            float rotationThisFrame = turnInput * rotationSpeed * Time.deltaTime;
+            transform.Rotate(0, rotationThisFrame, 0);
+        }
+
+        //Dircetion and speed
+        Vector3 targetDirection = transform.forward * moveInput.y;
+        float targetSpeed = Mathf.Abs(moveInput.y) * maxSpeed;
+
+        //Reverses
+        if (moveInput.y < 0)
+            targetSpeed *= backwardMultiplier;
+
+        //Acceleration using smoothdamp to simulate physics 
+        float accelSmoothTime = moveInput.y != 0 ? accelerationTime : decelerationTime;
+        currentVelocity = Vector3.SmoothDamp(
+            currentVelocity,
+            targetDirection * targetSpeed,
+            ref currentVelocityV,   
+            accelSmoothTime
+        );
+
+        //Grativity applied to tank
+        if (controller.isGrounded)
+        {
+            verticalVelocity = -2f; 
+        }
+        else
+        {
+            verticalVelocity += gravity * Time.deltaTime;
+        }
+
+        //Final move
+        Vector3 move = currentVelocity;
+        move.y = verticalVelocity;
+
+        //Applies the movement
+        controller.Move(move * Time.deltaTime);
+
+        //Reset vertical velocity when grounded
+        if (controller.isGrounded && verticalVelocity < 0)
+        {
+            verticalVelocity = -2f;
+        }
+    }
+
+    void SwitchToTurret(int index)
+    {
+        for (int i = 0; i < turrets.Length; i++)
+            if (turrets[i] != null) turrets[i].gameObject.SetActive(i == index);
+
+        if (turrets[index] != null)
+        {
+            activeTurret = turrets[index];
+        }
+    }
 }
