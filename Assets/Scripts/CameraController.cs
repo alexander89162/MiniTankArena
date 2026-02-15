@@ -14,8 +14,15 @@ public class CameraController : MonoBehaviour
     [SerializeField] float maxPitch = 70f;
 
     //Private variable to hold rotation
-    private Vector3 currentRotation = Vector3.zero;
+    private float yaw = 0;
+    private float pitch = 0;
+    private float targetYaw;
 
+    void Start()
+    {
+        targetYaw = followTarget.eulerAngles.y;
+        yaw = 180;
+    }
     void OnEnable()
     {
         if (lookAction?.action != null)
@@ -33,21 +40,24 @@ public class CameraController : MonoBehaviour
         //Gets look action
         Vector2 look = lookAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
 
+
         //Horizontal rotation 
-        currentRotation.y += look.x * rotationSpeed * Time.deltaTime;
+        targetYaw = followTarget.eulerAngles.y;
 
-        //Vertical rotation
-        currentRotation.x += look.y * rotationSpeed * Time.deltaTime;
-        currentRotation.x = Mathf.Clamp(currentRotation.x, minPitch, maxPitch);
+        // Accumulate RELATIVE rotations (mouse/stick)
+        yaw += look.x * rotationSpeed * Time.deltaTime;
+        float pitchInput = look.y * rotationSpeed * Time.deltaTime;
 
-        //Apply rotation
-        Quaternion rot = Quaternion.Euler(currentRotation.x, currentRotation.y, 0);
+        pitch += pitchInput;
+        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
+
+        // ABSOLUTE rotation: tank yaw + relative camera offset
+        Quaternion rot = Quaternion.Euler(pitch, targetYaw + yaw, 0);
+
+        // Position: rotate offset around target
         transform.position = followTarget.position + rot * offset;
-        transform.LookAt(followTarget.position + Vector3.up * 1.5f); 
-    }
 
-    public void ResetCamera()
-    {
-        currentRotation = Vector3.zero;
+        // Look at target (slight up bias for better view)
+        transform.LookAt(followTarget.position + followTarget.up * 1.5f);
     }
 }

@@ -861,9 +861,33 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1489925091833116724, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1922420406257782742, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: m_Name
       value: minitank-processed-v3 (1) Variant Variant
+      objectReference: {fileID: 0}
+    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: maxPitch
+      value: 115
+      objectReference: {fileID: 0}
+    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: minPitch
+      value: 75
+      objectReference: {fileID: 0}
+    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: offset.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: offset.y
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: offset.z
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7967342445530209420, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: m_LocalPosition.x
