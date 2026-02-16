@@ -7,6 +7,8 @@ public class UnitData
     public float health;
     public float movementSpeed;
 
+    public Transform weaponTarget;
+
     // Rig / animation dependencies
     public Transform[] legTargets;
     public Transform[] legHints;
@@ -14,4 +16,5 @@ public class UnitData
 
     // Runtime state
     public Vector3 planarMove;
+
 }
