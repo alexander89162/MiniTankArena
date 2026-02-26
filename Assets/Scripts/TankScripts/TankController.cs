@@ -6,6 +6,9 @@ public class TankController : MonoBehaviour
     //Private variable to grab character controller
     private CharacterController controller;
 
+    //Slope Align Tank Func
+    public TankSlope tankSlope;
+
     //To place tank turrents to array for cycling
     public Transform[] turrets = new Transform[3];
 
@@ -33,6 +36,11 @@ public class TankController : MonoBehaviour
         controller = GetComponent<CharacterController>();
 
         SwitchToTurret(turretIndex);
+
+    if (tankSlope != null)
+    {
+        tankSlope.tankRoot = transform;  // Pass root reference
+    }
     }
 
     public void OnMove(InputAction.CallbackContext context)
@@ -102,6 +110,11 @@ public class TankController : MonoBehaviour
         if (controller.isGrounded && verticalVelocity < 0)
         {
             verticalVelocity = -2f;
+        }
+
+        if (tankSlope != null)
+        {
+            tankSlope.UpdateAlignment(currentVelocity);
         }
     }
 

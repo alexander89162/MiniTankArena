@@ -270,7 +270,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookAction: {fileID: 2948036706600790992, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  followTarget: {fileID: 6714755720066046192}
+  followTarget: {fileID: 3059373085696360587}
   offset: {x: 0, y: 25, z: 2}
   rotationSpeed: 45
   minPitch: -45
@@ -462,7 +462,7 @@ GameObject:
   - component: {fileID: 1209226155}
   - component: {fileID: 1209226154}
   - component: {fileID: 1209226153}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -748,6 +748,11 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3523647609354193113}
   m_Mesh: {fileID: 1822624372067314877, guid: f5661dba68e75f04983cc89c43a032dd, type: 3}
+--- !u!4 &3059373085696360587 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7967342445530209420, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+  m_PrefabInstance: {fileID: 4964299541167397895}
+  m_PrefabAsset: {fileID: 0}
 --- !u!23 &3128342721351660253
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -861,6 +866,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 792026340740567266, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: tankSlope
+      value: 
+      objectReference: {fileID: 6714755720066046193}
     - target: {fileID: 1489925091833116724, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -929,10 +938,15 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 1489925091833116724, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+    - {fileID: 2302825603500856102, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1922420406257782742, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6714755720066046193}
   m_SourcePrefab: {fileID: 100100000, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
 --- !u!33 &5994389253621740659
 MeshFilter:
@@ -960,9 +974,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6714755720066046192 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 7967342445530209420, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+--- !u!114 &6714755720066046193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6794088016733262801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a451f54df2adc344ab79c0be4ad96e19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TankSlope
+  alignSpeed: 20
+  rayDistance: 5
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  minMoveSpeedToAlign: 0.5
+  tankRoot: {fileID: 3059373085696360587}
+--- !u!1 &6794088016733262801 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1922420406257782742, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
   m_PrefabInstance: {fileID: 4964299541167397895}
   m_PrefabAsset: {fileID: 0}
 --- !u!23 &7161903358682103660
