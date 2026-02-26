@@ -1,0 +1,6 @@
+:root {
+}
+
+ProgressBar {
+    scale: 1 1;
+}

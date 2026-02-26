@@ -131,7 +131,6 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
-  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -146,7 +145,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &330585545
 Camera:
   m_ObjectHideFlags: 0
@@ -257,24 +256,6 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!114 &330585548
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 330585543}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 44bcf7e6df215734c82901babb842768, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CameraController
-  lookAction: {fileID: 2948036706600790992, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  followTarget: {fileID: 3059373085696360587}
-  offset: {x: 0, y: 25, z: 2}
-  rotationSpeed: 45
-  minPitch: -45
-  maxPitch: 120
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -570,6 +551,61 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -500, y: 0, z: -500}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1645201278
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1645201280}
+  - component: {fileID: 1645201279}
+  m_Layer: 5
+  m_Name: TankHUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1645201279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1645201278}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: eb4d6c1ede1475947803dd9038c4cfb7, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 1459d8802f45c1146b05eaa29586db4c, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &1645201280
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1645201278}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1124,37 +1160,29 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 792026340740567266, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
-      propertyPath: tankSlope
-      value: 
-      objectReference: {fileID: 6714755720066046193}
-    - target: {fileID: 1489925091833116724, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
-      propertyPath: m_Enabled
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 1922420406257782742, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: m_Name
       value: minitank-processed-v3 (1) Variant Variant
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: maxPitch
-      value: 115
+      value: 125
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: minPitch
       value: 75
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
-      propertyPath: offset.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: offset.y
-      value: 15
+      value: 12.5
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: offset.z
-      value: 0
+      value: -2.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
+      propertyPath: rotationSpeed
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 7967342445530209420, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1247,30 +1275,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &6714755720066046193
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6794088016733262801}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a451f54df2adc344ab79c0be4ad96e19, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TankSlope
-  alignSpeed: 20
-  rayDistance: 5
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 8
-  minMoveSpeedToAlign: 0.5
-  tankRoot: {fileID: 3059373085696360587}
---- !u!1 &6794088016733262801 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1922420406257782742, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
-  m_PrefabInstance: {fileID: 4964299541167397895}
-  m_PrefabAsset: {fileID: 0}
 --- !u!23 &7161903358682103660
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1413,3 +1417,4 @@ SceneRoots:
   - {fileID: 2007744710}
   - {fileID: 267571476665129001}
   - {fileID: 4964299541167397895}
+  - {fileID: 1645201280}
