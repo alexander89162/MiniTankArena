@@ -1,20 +1,7 @@
 using UnityEngine;
 
-public class UnitData
+public struct UnitData
 {
     public int id;
     public int team;
-    public float health;
-    public float movementSpeed;
-
-    public Transform weaponTarget;
-
-    // Rig / animation dependencies
-    public Transform[] legTargets;
-    public Transform[] legHints;
-    public Vector3[] hintOffsets;
-
-    // Runtime state
-    public Vector3 planarMove;
-
 }
