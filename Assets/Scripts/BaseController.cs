@@ -24,20 +24,18 @@ public class BaseController : MonoBehaviour
     public int level = 1;
     public float health = 100f;
     public float movementSpeed = 2f;
-    public int team; // allow tanks to fight by your side, against each other, etc
+    public int team;
 
     // Modules -- these cannot be assigned in inspector because they're implementations of an interface, so they can only be hard-coded for now and later on assigned by the spawner
-    public IBrainModule brainModule;
-    public IMovementModule movementModule;
-    public IAnimationModule animationModule;
-    public IAttackModule attackModule;
+    private IBrainModule brainModule;
+    private IMovementModule movementModule;
+    private IAnimationModule animationModule;
+    private IAttackModule attackModule;
 
     public Vector3 planarMove = Vector3.zero;
 
     void Awake()
     {
-        // TODO: Instantiate rig (?)
-
         // Set level, health, movement speed, and team.
         // If it's the player, then load the account's values from JSON
         if (gameObject.CompareTag("Player"))
