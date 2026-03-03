@@ -69,8 +69,9 @@ public class UnitManager : MonoBehaviour
     {
         unitHandles = new List<UnitData>();
         prefabLookup = prefabList.ToDictionary(p => p.name, p => p);
-        waveTransitions = new Dictionary<string, string>();
+        waveTransitions = new Dictionary<string, string>(); // this is filled inside of LoadWaveConfigurations()
         SetWaveContentsPath(currentMap);
+        LoadWaveConfigurations();
     }
 
     void Update()
@@ -158,7 +159,7 @@ public class UnitManager : MonoBehaviour
 
     private IEnumerator LoadWave()
     {
-        string path = waveContentsPath;
+        string path = System.IO.Path.Combine(waveContentsPath, currentWave);
 
         UnityWebRequest request = UnityWebRequest.Get(path);
         yield return request.SendWebRequest();
@@ -218,8 +219,10 @@ public class UnitManager : MonoBehaviour
         unitHandles.Clear();
         for (int i = 0; i < wave.unitConfigs.Length; i++)
         {
-            UnitData handle = new UnitData();
-            handle.config = wave.unitConfigs[i];
+            UnitData handle = new UnitData
+            {
+                config = wave.unitConfigs[i]
+            };
 
             unitHandles.Add(handle);
         }
@@ -235,6 +238,7 @@ public class UnitManager : MonoBehaviour
             UnitConfig config = unitHandles[i].config;
             GameObject unitPrefab = prefabLookup[config.prefabName];
             GameObject unit = Instantiate(unitPrefab);
+            unitHandles[i].gameObject = unit;
             unit.SetActive(false);
 
             if ((i+1) % batchSize == 0)
@@ -242,7 +246,9 @@ public class UnitManager : MonoBehaviour
         }
 
         // Sort unitHandles by spawnDelay so it's ready for building the spawn queue
-        // TODO
+        unitHandles.Sort((a, b) =>
+            a.config.spawnDelay.CompareTo(b.config.spawnDelay)
+        );
 
         SetState(WaveState.WaveRunning);
         busy = false;
@@ -262,7 +268,7 @@ public class UnitManager : MonoBehaviour
 
     public string FindNextWave(string previous)
     {
-        switch (waveMode)
+        switch (waveMode.ToLower())
         {
             case "sequential":
                 string lastWaveNum = previous.Substring(4);
