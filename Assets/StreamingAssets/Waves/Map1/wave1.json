@@ -3,20 +3,32 @@
     {
       "prefabName": "Cannon",
       "spawnDelay": 0.7,
-      "position": { "x": 0.0, "y": 0.0, "z": 5.0 },
-      "rotation": { "x": 0.0, "y": 180.0, "z": 0.0 }
+      "spawnPosition": { "x": 0.0, "y": 0.0, "z": 5.0 },
+      "spawnRotation": { "x": 0.0, "y": 180.0, "z": 0.0 },
+      "team": 1,
+      "damageMultiplier": 1.0,
+      "healthMultiplier": 1.0,
+      "movementSpeed": 1.0
     },
     {
       "prefabName": "Cannon",
       "spawnDelay": 2.0,
-      "position": { "x": 2.0, "y": 0.0, "z": 5.0 },
-      "rotation": { "x": 0.0, "y": 180.0, "z": 0.0 }
+      "spawnPosition": { "x": 2.0, "y": 0.0, "z": 5.0 },
+      "spawnRotation": { "x": 0.0, "y": 180.0, "z": 0.0 },
+      "team": 1,
+      "damageMultiplier": 1.0,
+      "healthMultiplier": 1.0,
+      "movementSpeed": 1.0
     },
     {
       "prefabName": "Ballistic",
       "spawnDelay": 2.8,
-      "position": { "x": -2.0, "y": 0.0, "z": 6.0 },
-      "rotation": { "x": 0.0, "y": 180.0, "z": 0.0 }
+      "spawnPosition": { "x": -2.0, "y": 0.0, "z": 6.0 },
+      "spawnRotation": { "x": 0.0, "y": 180.0, "z": 0.0 },
+      "team": 2,
+      "damageMultiplier": 1.0,
+      "healthMultiplier": 1.0,
+      "movementSpeed": 1.0
     }
   ]
 }
