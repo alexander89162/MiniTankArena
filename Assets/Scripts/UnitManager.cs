@@ -10,11 +10,12 @@ public class UnitManager : MonoBehaviour
 {
     public enum WaveState
     {
-        Allocating,
-        BuildingQueue,
-        WaveRunning,
-        Deallocating,
-        Paused
+        Allocating, // Fills unitHandles with instantiated units (disabled until WaveRunning)
+        BuildingQueue, // Fills SpawnQueue by first-to-last spawnDelay
+        WaveReady, // We allocated and filled queue, now just wait for minimum wait time between waves so waves never start too quickly
+        WaveRunning, // Gradually empty the SpawnQueue, then transition to next wave when all enemies or player has died
+        Deallocating, // Destroys all units, empty unitHandles
+        Paused // Prevent units from spawning when game pauses--actual enemy logic is paused via controllers
     }
     public int batchSize = 20; // how many units to allocate per frame during allocation state
     [SerializeField] private List<GameObject> prefabList;
@@ -23,6 +24,8 @@ public class UnitManager : MonoBehaviour
     private WaveState currentState;
     private string currentWave { get; set; }
     private string waveMode;
+    [SerializeField] private float minInterWaveTime = 10f; // min time to wait between waves
+    private float interWaveTimer = 0f;
     private float waveTimer = 0;
     public int enemiesRemaining;
     private Queue<UnitData> spawnQueue;
@@ -65,13 +68,16 @@ public class UnitManager : MonoBehaviour
         public UnitConfig[] unitConfigs;
     }
 
+    public event Action OnVictory;
+
     void Awake()
     {
         unitHandles = new List<UnitData>();
         prefabLookup = prefabList.ToDictionary(p => p.name, p => p);
+        spawnQueue = new Queue<UnitData>();
         waveTransitions = new Dictionary<string, string>(); // this is filled inside of LoadWaveConfigurations()
         SetWaveContentsPath(currentMap);
-        LoadWaveConfigurations();
+        StartCoroutine(LoadWaveConfigurations());
     }
 
     void Update()
@@ -80,7 +86,12 @@ public class UnitManager : MonoBehaviour
     {
         switch (currentState)
         {
+            case WaveState.WaveRunning:
+                UpdateWave(); // Uses queue to gradually spawn everything, then waits for all enemies (or player) to die to end wave
+                break;
+
             case WaveState.Allocating:
+                interWaveTimer += Time.deltaTime;
                 if (!busy)
                 {
                     busy = true;
@@ -89,11 +100,18 @@ public class UnitManager : MonoBehaviour
                 break;
 
             case WaveState.BuildingQueue:
+                interWaveTimer += Time.deltaTime;
                 if (!busy)
                 {
                     busy = true;
                     BuildSpawnQueue(); // Build the queue to read from during WaveRunning state
                 }
+                break;
+
+            case WaveState.WaveReady:
+                interWaveTimer += Time.deltaTime;
+                if (interWaveTimer > minInterWaveTime)
+                    SetState(WaveState.WaveRunning);
                 break;
             
             case WaveState.Deallocating:
@@ -102,14 +120,11 @@ public class UnitManager : MonoBehaviour
                     busy = true;
                     DeallocateWave();
                 }
+                interWaveTimer = 0f;
                 break;
 
             case WaveState.Paused:
                 // do nothing (?)
-                break;
-
-            case WaveState.WaveRunning:
-                UpdateWave(); // Uses queue to gradually spawn everything, then waits for all enemies (or player) to die to end wave
                 break;
         }
     }
@@ -201,9 +216,11 @@ public class UnitManager : MonoBehaviour
                 request.downloadHandler.text
             );
 
+        waveMode = config.waveMode;
+
         waveTransitions.Clear();
 
-        if (config.waveMode.ToLower() == "procedural")
+        if (waveMode.ToLower() == "procedural")
         {
             foreach (var t in config.transitions)
             {
@@ -241,7 +258,7 @@ public class UnitManager : MonoBehaviour
             unitHandles[i].gameObject = unit;
             unit.SetActive(false);
 
-            if ((i+1) % batchSize == 0)
+            if (i % batchSize == 0)
                 yield return null;
         }
 
@@ -250,20 +267,50 @@ public class UnitManager : MonoBehaviour
             a.config.spawnDelay.CompareTo(b.config.spawnDelay)
         );
 
-        SetState(WaveState.WaveRunning);
+        SetState(WaveState.BuildingQueue);
         busy = false;
     }
 
     private void BuildSpawnQueue()
     /*Fill the spawn queue so it's ready for the wave to use*/
     {
-        //
+        spawnQueue.Clear();
+
+        foreach (var unit in unitHandles)
+        {
+            spawnQueue.Enqueue(unit);
+        }
+
+        waveTimer = 0f;
+        enemiesRemaining = unitHandles.Count;
+
+        busy = false;
+        SetState(WaveState.WaveReady);
     }
 
     public void DeallocateWave()
     /*Destroy all the GameObjects in unitHandles, then clear list*/
     {
-        //
+        foreach (var unit in unitHandles)
+        {
+            Destroy(unit.gameObject);
+        }
+
+        unitHandles.Clear();
+
+        // try to find the next wave. If it does not exist, we can terminate 
+        // this UnitManager instance and send message to UI about Victory
+        currentWave = FindNextWave(currentWave);
+        if (currentWave != null)
+        {
+            SetState(WaveState.Allocating);
+        }
+        else
+        {
+            OnVictory?.Invoke(); // send UI a message indicating the player won
+            Destroy(this); // terminate this UnitManager instance
+        }
+        
     }
 
     public string FindNextWave(string previous)
@@ -271,16 +318,16 @@ public class UnitManager : MonoBehaviour
         switch (waveMode.ToLower())
         {
             case "sequential":
-                string lastWaveNum = previous.Substring(4);
-                return String.Concat("wave", (lastWaveNum+1));
+                int lastWaveNum = int.Parse(previous.Substring(4));
+                return "wave" + (lastWaveNum + 1);
             case "procedural":
                 if (waveTransitions != null && waveTransitions.TryGetValue(previous, out string next))
                     return next;
-                Debug.LogWarning("No procedural transition found, defaulting to wave1");
-                return "wave1";
+                Debug.LogWarning("Error: No procedural transition was found for " + currentWave);
+                return null;
             default:
                 Debug.Log("Error: Spawn method was not specified");
-                return "wave1";
+                return null;
         }
     }
     
