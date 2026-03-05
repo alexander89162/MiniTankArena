@@ -22,9 +22,14 @@ public class BaseController : MonoBehaviour
 
     [Header("Core Stats")] // configure to test for now; will be changed later to load upgrades from JSON
     public int level = 1;
+    [SerializeField] private float maxHealth = 100f;
     public float health = 100f;
     public float movementSpeed = 2f;
     public int team; // allow tanks to fight by your side, against each other, etc
+
+    [Header("Weapon Stats")]
+    [SerializeField] private int maxAmmo = 30;
+    [SerializeField] private int currentAmmo = 30;
 
     // Modules -- these cannot be assigned in inspector because they're implementations of an interface, so they can only be hard-coded for now and later on assigned by the spawner
     public IBrainModule brainModule;
@@ -57,6 +62,15 @@ public class BaseController : MonoBehaviour
         movementModule = new MiniTankMovement(this, this.transform, movementSpeed);
         attackModule = new CannonAttack();
         animationModule = new MiniTankAnimation(this);
+
+        if (maxHealth <= 0f)
+            maxHealth = 100f;
+
+        if (health <= 0f)
+            health = maxHealth;
+
+        health = Mathf.Clamp(health, 0f, maxHealth);
+        currentAmmo = Mathf.Clamp(currentAmmo, 0, Mathf.Max(0, maxAmmo));
     }
 
     void FixedUpdate()
@@ -76,4 +90,51 @@ public class BaseController : MonoBehaviour
     public void SetMovementModule(IMovementModule movementModule) { this.movementModule = movementModule; }
     public void SetAttackModule(IAttackModule attackModule) { this.attackModule = attackModule; }
     public void SetAnimationModule(IAnimationModule animationModule) { this.animationModule = animationModule; }
+
+    public float CurrentHealth => health;
+    public float MaxHealth => maxHealth;
+    public int CurrentAmmo => currentAmmo;
+    public int MaxAmmo => maxAmmo;
+
+    public void SetHealth(float value)
+    {
+        health = Mathf.Clamp(value, 0f, maxHealth);
+    }
+
+    public void ApplyDamage(float amount)
+    {
+        if (amount <= 0f)
+            return;
+
+        SetHealth(health - amount);
+    }
+
+    public void Heal(float amount)
+    {
+        if (amount <= 0f)
+            return;
+
+        SetHealth(health + amount);
+    }
+
+    public void SetAmmo(int value)
+    {
+        currentAmmo = Mathf.Clamp(value, 0, maxAmmo);
+    }
+
+    public void ConsumeAmmo(int amount = 1)
+    {
+        if (amount <= 0)
+            return;
+
+        SetAmmo(currentAmmo - amount);
+    }
+
+    public void RefillAmmo(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        SetAmmo(currentAmmo + amount);
+    }
 }
