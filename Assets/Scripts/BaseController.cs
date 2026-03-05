@@ -25,7 +25,7 @@ public class BaseController : MonoBehaviour
     [SerializeField] private float maxHealth = 100f;
     public float health = 100f;
     public float movementSpeed = 2f;
-    public int team; // allow tanks to fight by your side, against each other, etc
+    public int team;
 
     [Header("Weapon Stats")]
     [SerializeField] private int maxAmmo = 30;
@@ -41,8 +41,6 @@ public class BaseController : MonoBehaviour
 
     void Awake()
     {
-        // TODO: Instantiate rig (?)
-
         // Set level, health, movement speed, and team.
         // If it's the player, then load the account's values from JSON
         if (gameObject.CompareTag("Player"))

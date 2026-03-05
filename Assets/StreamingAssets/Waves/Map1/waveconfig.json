@@ -1,0 +1,8 @@
+{
+    "waveMode": "Endless",
+
+    "transitions": [
+        { "from": "wave1", "to": "wave3" },
+        { "from": "wave3", "to": "wave2" }
+    ]
+}
