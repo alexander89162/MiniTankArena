@@ -29,7 +29,7 @@ public class TankController : MonoBehaviour
     private Vector2 moveInput;                     
     private Vector3 currentVelocity = Vector3.zero;
     private float verticalVelocity = 0f;
-    private Vector3 currentVelocityV = Vector3.zero; 
+    public Vector3 currentVelocityV = Vector3.zero; 
 
     void Awake()
     {
@@ -127,5 +127,6 @@ public class TankController : MonoBehaviour
         {
             activeTurret = turrets[index];
         }
-    }
+
+        }
 }
