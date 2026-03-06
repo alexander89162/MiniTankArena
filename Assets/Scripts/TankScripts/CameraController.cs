@@ -6,12 +6,15 @@ public class CameraController : MonoBehaviour
     //Sets up look action and transform object to grab
     [SerializeField] InputActionReference lookAction;     
     [SerializeField] Transform followTarget;             
+    [SerializeField] string preferredTargetName = "minitank-v10-green 1";
+    [SerializeField] bool forcePreferredTarget = true;
 
     //Variables to change how the camera feels when moving
-    [SerializeField] Vector3 offset = new Vector3(0, 3f, -8f);
-    [SerializeField] float rotationSpeed = 120f;
-    [SerializeField] float minPitch = -20f;
-    [SerializeField] float maxPitch = 70f;
+    [SerializeField] Vector3 offset = new Vector3(2.2f, 2.2f, -8.2f);
+    [SerializeField] float rotationSpeed = 90f;
+    [SerializeField] float minPitch = -8f;
+    [SerializeField] float maxPitch = 35f;
+    [SerializeField] float lookAtHeight = 1.25f;
 
     //Private variable to hold rotation
     private float yaw = 0;
@@ -20,8 +23,17 @@ public class CameraController : MonoBehaviour
 
     void Start()
     {
+        EnsurePreferredFollowTarget();
+
+        if (followTarget == null)
+            followTarget = ResolveDefaultFollowTarget();
+
+        if (followTarget == null)
+            return;
+
         targetYaw = followTarget.eulerAngles.y;
-        yaw = 180;
+        yaw = 0f;
+        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
     }
     void OnEnable()
     {
@@ -37,6 +49,15 @@ public class CameraController : MonoBehaviour
 
     void LateUpdate()
     {
+        EnsurePreferredFollowTarget();
+
+        if (followTarget == null)
+        {
+            followTarget = ResolveDefaultFollowTarget();
+            if (followTarget == null)
+                return;
+        }
+
         //Gets look action
         Vector2 look = lookAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
 
@@ -58,6 +79,51 @@ public class CameraController : MonoBehaviour
         transform.position = followTarget.position + rot * offset;
 
         // Look at target (slight up bias for better view)
-        transform.LookAt(followTarget.position + followTarget.up * 1.5f);
+        transform.LookAt(followTarget.position + followTarget.up * lookAtHeight);
+    }
+
+    void EnsurePreferredFollowTarget()
+    {
+        if (!forcePreferredTarget)
+            return;
+
+        if (string.IsNullOrWhiteSpace(preferredTargetName))
+            return;
+
+        GameObject preferred = GameObject.Find(preferredTargetName);
+        if (preferred == null)
+            return;
+
+        if (followTarget != preferred.transform)
+            followTarget = preferred.transform;
+    }
+
+    static Transform ResolveDefaultFollowTarget()
+    {
+        GameObject preferredGreenTank = GameObject.Find("minitank-v10-green 1");
+        if (preferredGreenTank != null)
+            return preferredGreenTank.transform;
+
+        GameObject greenTank = GameObject.Find("minitank-v10-green");
+        if (greenTank != null)
+            return greenTank.transform;
+
+        GameObject taggedPlayer = null;
+        try
+        {
+            taggedPlayer = GameObject.FindGameObjectWithTag("Player");
+        }
+        catch (UnityException)
+        {
+        }
+
+        if (taggedPlayer != null)
+            return taggedPlayer.transform;
+
+        TankController tankController = FindFirstObjectByType<TankController>();
+        if (tankController != null)
+            return tankController.transform;
+
+        return null;
     }
 }

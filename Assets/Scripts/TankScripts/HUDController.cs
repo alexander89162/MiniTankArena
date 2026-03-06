@@ -262,6 +262,16 @@ public class HUDController : MonoBehaviour
 
         nextTargetResolveTime = Time.unscaledTime + targetResolveInterval;
 
+        GameObject preferredTank = GameObject.Find("minitank-v10-green 1");
+        if (preferredTank == null)
+            preferredTank = GameObject.Find("minitank-v10-green");
+
+        if (preferredTank != null)
+        {
+            cachedMinimapTarget = preferredTank.transform;
+            return cachedMinimapTarget;
+        }
+
         GameObject taggedPlayer = TryFindTaggedPlayer();
         if (taggedPlayer != null)
         {

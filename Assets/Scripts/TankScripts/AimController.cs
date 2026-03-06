@@ -16,6 +16,7 @@ public class AimController: MonoBehaviour
     //Variables to set users aim
     [SerializeField] float aimSensitivity = 4f;
     [SerializeField] float turretTurnSpeed = 120f;
+    [SerializeField] float maxYawRate = 180f;
 
     //grabs the obejects to transform
     [SerializeField] Transform turretTransform;   
@@ -28,6 +29,14 @@ public class AimController: MonoBehaviour
 
     [SerializeField] Vector3 manualLocalAimAxis = Vector3.forward;
 
+    [Header("Targeting")]
+    [SerializeField] Camera mainCamera;
+    [SerializeField] LayerMask targetLayerMask = -1;
+    [SerializeField] LayerMask losBlockerMask = -1;
+    [SerializeField] float maxCameraDistance = 1000f;
+    [SerializeField] LayerMask ignoreLayerMask = 0;
+    [SerializeField] bool useWeaponForwardAsPrimary = true;
+
     //private variables to use later
     private Vector2 aimInput;
     private float turretYawOffset;
@@ -35,6 +44,9 @@ public class AimController: MonoBehaviour
     private Vector3 cannonBaseEuler;
     private Vector3 resolvedLocalAimAxis = Vector3.forward;
     private bool hasResolvedAimAxis;
+    private Vector3 cameraTarget;
+    private Vector3 actualTarget;
+    private bool hasValidTarget;
 
     void Awake()
     {
@@ -47,6 +59,9 @@ public class AimController: MonoBehaviour
         }
 
         TryResolveAimAxis();
+
+        if (mainCamera == null)
+            mainCamera = Camera.main;
     }
 
     void Update()
@@ -54,30 +69,33 @@ public class AimController: MonoBehaviour
         //Gets the aim input
         aimInput = aimDeltaAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
 
-        if (turretTransform == null || cannonTransform == null)
-            return;
-
-        bool sharedTurretAndCannon = turretTransform == cannonTransform;
-
-        //Rotates the turret weapon
-        float yaw = aimInput.x * aimSensitivity * Time.deltaTime;
-        turretYawOffset += yaw * turretTurnSpeed;
-
-        float turretBaseYaw = NormalizeSignedAngle(GetAxisValue(turretBaseEuler, turretYawAxis));
-
-        if (sharedTurretAndCannon)
+        if (turretTransform != null && cannonTransform != null)
         {
-            Vector3 combinedEuler = turretBaseEuler;
-            combinedEuler = SetAxisValue(combinedEuler, turretYawAxis, turretBaseYaw + turretYawOffset);
-            turretTransform.localEulerAngles = combinedEuler;
-            return;
+            bool sharedTurretAndCannon = turretTransform == cannonTransform;
+
+            //Rotates the turret weapon
+            float rawYawRate = aimInput.x * aimSensitivity * turretTurnSpeed;
+            float clampedYawRate = Mathf.Clamp(rawYawRate, -maxYawRate, maxYawRate);
+            turretYawOffset += clampedYawRate * Time.deltaTime;
+
+            float turretBaseYaw = NormalizeSignedAngle(GetAxisValue(turretBaseEuler, turretYawAxis));
+
+            if (sharedTurretAndCannon)
+            {
+                Vector3 combinedEuler = turretBaseEuler;
+                combinedEuler = SetAxisValue(combinedEuler, turretYawAxis, turretBaseYaw + turretYawOffset);
+                turretTransform.localEulerAngles = combinedEuler;
+            }
+            else
+            {
+                turretTransform.localEulerAngles = SetAxisValue(turretBaseEuler, turretYawAxis, turretBaseYaw + turretYawOffset);
+
+                // Keep cannon hard-attached to turret with no pitch changes.
+                cannonTransform.localEulerAngles = cannonBaseEuler;
+            }
         }
 
-        turretTransform.localEulerAngles = SetAxisValue(turretBaseEuler, turretYawAxis, turretBaseYaw + turretYawOffset);
-
-        // Keep cannon hard-attached to turret with no pitch changes.
-        if (cannonTransform != null)
-            cannonTransform.localEulerAngles = cannonBaseEuler;
+        UpdateTargeting();
     }
 
     public Vector3 GetAimDirection()
@@ -108,6 +126,21 @@ public class AimController: MonoBehaviour
     public Transform GetTurretTransform()
     {
         return turretTransform;
+    }
+
+    public Vector3 GetTargetPosition()
+    {
+        return actualTarget;
+    }
+
+    public Vector3 GetCameraTarget()
+    {
+        return cameraTarget;
+    }
+
+    public bool HasValidTarget()
+    {
+        return hasValidTarget;
     }
 
     private static float NormalizeSignedAngle(float angle)
@@ -199,5 +232,92 @@ public class AimController: MonoBehaviour
 
         resolvedLocalAimAxis = ResolveBestAimDirection(cannonTransform);
         hasResolvedAimAxis = true;
+    }
+
+    private void UpdateTargeting()
+    {
+        int cameraMask = targetLayerMask & ~ignoreLayerMask.value;
+        int losMask = losBlockerMask & ~ignoreLayerMask.value;
+
+        if (useWeaponForwardAsPrimary && cannonTransform != null)
+        {
+            Vector3 weaponRayDirection = GetAimDirection();
+            Vector3 weaponRayOrigin = cannonTransform.position + weaponRayDirection * 0.35f;
+
+            if (TryRaycastIgnoringSelf(weaponRayOrigin, weaponRayDirection, maxCameraDistance, losMask, out RaycastHit weaponHit))
+                actualTarget = weaponHit.point;
+            else
+                actualTarget = weaponRayOrigin + weaponRayDirection * maxCameraDistance;
+
+            cameraTarget = actualTarget;
+            hasValidTarget = true;
+            return;
+        }
+
+        if (mainCamera == null)
+            mainCamera = Camera.main;
+
+        if (mainCamera == null)
+        {
+            hasValidTarget = false;
+            return;
+        }
+
+        Vector3 cameraRayOrigin = mainCamera.transform.position;
+        Vector3 cameraRayDirection = mainCamera.transform.forward;
+
+        if (Physics.Raycast(cameraRayOrigin, cameraRayDirection, out RaycastHit cameraHit, maxCameraDistance, cameraMask))
+            cameraTarget = cameraHit.point;
+        else
+            cameraTarget = cameraRayOrigin + cameraRayDirection * maxCameraDistance;
+
+        Transform weapon = cannonTransform != null ? cannonTransform : turretTransform;
+        if (weapon != null)
+        {
+            Vector3 weaponToTarget = (cameraTarget - weapon.position).normalized;
+            float distanceToTarget = Vector3.Distance(weapon.position, cameraTarget);
+
+            Vector3 weaponOrigin = weapon.position + weaponToTarget * 0.35f;
+            if (TryRaycastIgnoringSelf(weaponOrigin, weaponToTarget, distanceToTarget, losMask, out RaycastHit losHit))
+                actualTarget = losHit.point;
+            else
+                actualTarget = cameraTarget;
+
+            hasValidTarget = true;
+            return;
+        }
+
+        actualTarget = cameraTarget;
+        hasValidTarget = true;
+    }
+
+    bool TryRaycastIgnoringSelf(Vector3 origin, Vector3 direction, float distance, int mask, out RaycastHit hit)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction, distance, mask, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+        {
+            hit = default;
+            return false;
+        }
+
+        System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+        Transform selfRoot = transform.root;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider candidateCollider = hits[i].collider;
+            if (candidateCollider == null)
+                continue;
+
+            Transform candidateTransform = candidateCollider.transform;
+            if (candidateTransform != null && candidateTransform.IsChildOf(selfRoot))
+                continue;
+
+            hit = hits[i];
+            return true;
+        }
+
+        hit = default;
+        return false;
     }
 }
