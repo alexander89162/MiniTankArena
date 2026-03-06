@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class AnimatePowerup : MonoBehaviour
 {
-    public float floatHeight;
-    public float floatSpeed;
-    public float rotationSpeed;
+    public float floatHeight = 1.1f;
+    public float floatSpeed = 3.3f;
+    public float rotationSpeed = 35f;
 
     private float phaseOffset;
     private Vector3 startPos;
@@ -22,6 +22,6 @@ public class AnimatePowerup : MonoBehaviour
         transform.localPosition = startPos + new Vector3(0, y, 0);
 
         // Rotate at constant speed
-        transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
+        transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
     }
 }
