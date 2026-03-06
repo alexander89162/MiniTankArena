@@ -962,10 +962,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookAction: {fileID: 2948036706600790992, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   followTarget: {fileID: 5815115966685305185}
-  offset: {x: 0, y: 25, z: -25}
+  offset: {x: 0, y: 14, z: -42}
   rotationSpeed: 50
-  minPitch: 75
-  maxPitch: 125
+  minPitch: -8
+  maxPitch: 35
 --- !u!1 &8384279126167871198
 GameObject:
   m_ObjectHideFlags: 0

@@ -8,6 +8,7 @@ public class CameraController : MonoBehaviour
     [SerializeField] Transform followTarget;             
     [SerializeField] string preferredTargetName = "minitank-v10-green 1";
     [SerializeField] bool forcePreferredTarget = true;
+    [SerializeField] bool enableOnlyOnPreferredTank = true;
 
     //Variables to change how the camera feels when moving
     [SerializeField] Vector3 offset = new Vector3(2.2f, 2.2f, -8.2f);
@@ -20,9 +21,16 @@ public class CameraController : MonoBehaviour
     private float yaw = 0;
     private float pitch = 0;
     private float targetYaw;
+    private Camera cachedCamera;
+    private AudioListener cachedAudioListener;
 
     void Start()
     {
+        cachedCamera = GetComponentInChildren<Camera>(true);
+        cachedAudioListener = GetComponentInChildren<AudioListener>(true);
+
+        ApplyCameraOwnershipGate();
+
         EnsurePreferredFollowTarget();
 
         if (followTarget == null)
@@ -49,6 +57,11 @@ public class CameraController : MonoBehaviour
 
     void LateUpdate()
     {
+        ApplyCameraOwnershipGate();
+
+        if (enableOnlyOnPreferredTank && cachedCamera != null && !cachedCamera.enabled)
+            return;
+
         EnsurePreferredFollowTarget();
 
         if (followTarget == null)
@@ -80,6 +93,41 @@ public class CameraController : MonoBehaviour
 
         // Look at target (slight up bias for better view)
         transform.LookAt(followTarget.position + followTarget.up * lookAtHeight);
+    }
+
+    void ApplyCameraOwnershipGate()
+    {
+        if (!enableOnlyOnPreferredTank)
+            return;
+
+        bool isPreferredTank = IsPreferredTankRoot();
+
+        if (cachedCamera != null)
+            cachedCamera.enabled = isPreferredTank;
+
+        if (cachedAudioListener != null)
+            cachedAudioListener.enabled = isPreferredTank;
+    }
+
+    bool IsPreferredTankRoot()
+    {
+        Transform root = transform.root;
+        if (root == null)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(preferredTargetName) && root.name == preferredTargetName)
+            return true;
+
+        try
+        {
+            if (root.CompareTag("Player") || root.CompareTag("player"))
+                return true;
+        }
+        catch (UnityException)
+        {
+        }
+
+        return false;
     }
 
     void EnsurePreferredFollowTarget()

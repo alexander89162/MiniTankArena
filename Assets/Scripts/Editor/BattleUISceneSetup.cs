@@ -488,10 +488,51 @@ public static class BattleUISceneSetup
             return;
 
         Transform crosshairTransform = battleUiRoot.Find("Crosshair");
+
+        if (crosshairTransform == null)
+        {
+            CrosshairScript[] existingCrosshairScripts = Object.FindObjectsByType<CrosshairScript>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < existingCrosshairScripts.Length; i++)
+            {
+                CrosshairScript existingScript = existingCrosshairScripts[i];
+                if (existingScript == null)
+                    continue;
+
+                if (existingScript.gameObject.scene != battleUiRoot.gameObject.scene)
+                    continue;
+
+                crosshairTransform = existingScript.transform;
+                break;
+            }
+        }
+
+        if (crosshairTransform == null)
+        {
+            Image[] existingImages = Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < existingImages.Length; i++)
+            {
+                Image candidateImage = existingImages[i];
+                if (candidateImage == null)
+                    continue;
+
+                if (!string.Equals(candidateImage.name, "Crosshair", System.StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                if (candidateImage.gameObject.scene != battleUiRoot.gameObject.scene)
+                    continue;
+
+                crosshairTransform = candidateImage.transform;
+                break;
+            }
+        }
+
         Image crosshairImage = null;
 
         if (crosshairTransform != null)
+        {
+            crosshairTransform.SetParent(battleUiRoot, false);
             crosshairImage = crosshairTransform.GetComponent<Image>();
+        }
 
         if (crosshairImage == null)
         {
@@ -505,6 +546,10 @@ public static class BattleUISceneSetup
             crosshairTransform.gameObject.AddComponent<CrosshairScript>();
         }
 
+        crosshairTransform.gameObject.name = "Crosshair";
+        crosshairTransform.gameObject.SetActive(true);
+        crosshairTransform.SetAsLastSibling();
+
         RectTransform crosshairRect = crosshairTransform as RectTransform;
         if (crosshairRect == null)
             crosshairRect = crosshairTransform.gameObject.AddComponent<RectTransform>();
@@ -516,7 +561,7 @@ public static class BattleUISceneSetup
         crosshairRect.anchoredPosition = Vector2.zero;
 
         Sprite defaultSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
-        if (defaultSprite != null)
+        if (crosshairImage.sprite == null && defaultSprite != null)
             crosshairImage.sprite = defaultSprite;
 
         crosshairImage.type = Image.Type.Simple;

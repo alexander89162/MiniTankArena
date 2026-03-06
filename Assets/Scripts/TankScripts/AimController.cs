@@ -40,8 +40,8 @@ public class AimController: MonoBehaviour
     //private variables to use later
     private Vector2 aimInput;
     private float turretYawOffset;
-    private Vector3 turretBaseEuler;
-    private Vector3 cannonBaseEuler;
+    private Quaternion turretBaseLocalRotation;
+    private Quaternion cannonBaseLocalRotation;
     private Vector3 resolvedLocalAimAxis = Vector3.forward;
     private bool hasResolvedAimAxis;
     private Vector3 cameraTarget;
@@ -51,17 +51,17 @@ public class AimController: MonoBehaviour
     void Awake()
     {
         if (turretTransform != null)
-            turretBaseEuler = turretTransform.localEulerAngles;
+            turretBaseLocalRotation = turretTransform.localRotation;
 
         if (cannonTransform != null)
-        {
-            cannonBaseEuler = cannonTransform.localEulerAngles;
-        }
+            cannonBaseLocalRotation = cannonTransform.localRotation;
 
         TryResolveAimAxis();
 
         if (mainCamera == null)
-            mainCamera = Camera.main;
+            mainCamera = ResolveGameplayCamera();
+
+        ApplyTurretRotation();
     }
 
     void Update()
@@ -69,33 +69,32 @@ public class AimController: MonoBehaviour
         //Gets the aim input
         aimInput = aimDeltaAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
 
-        if (turretTransform != null && cannonTransform != null)
-        {
-            bool sharedTurretAndCannon = turretTransform == cannonTransform;
+        float rawYawRate = aimInput.x * aimSensitivity * turretTurnSpeed;
+        float clampedYawRate = Mathf.Clamp(rawYawRate, -maxYawRate, maxYawRate);
+        turretYawOffset += clampedYawRate * Time.deltaTime;
 
-            //Rotates the turret weapon
-            float rawYawRate = aimInput.x * aimSensitivity * turretTurnSpeed;
-            float clampedYawRate = Mathf.Clamp(rawYawRate, -maxYawRate, maxYawRate);
-            turretYawOffset += clampedYawRate * Time.deltaTime;
+        turretYawOffset = Mathf.Repeat(turretYawOffset + 180f, 360f) - 180f;
 
-            float turretBaseYaw = NormalizeSignedAngle(GetAxisValue(turretBaseEuler, turretYawAxis));
-
-            if (sharedTurretAndCannon)
-            {
-                Vector3 combinedEuler = turretBaseEuler;
-                combinedEuler = SetAxisValue(combinedEuler, turretYawAxis, turretBaseYaw + turretYawOffset);
-                turretTransform.localEulerAngles = combinedEuler;
-            }
-            else
-            {
-                turretTransform.localEulerAngles = SetAxisValue(turretBaseEuler, turretYawAxis, turretBaseYaw + turretYawOffset);
-
-                // Keep cannon hard-attached to turret with no pitch changes.
-                cannonTransform.localEulerAngles = cannonBaseEuler;
-            }
-        }
+        ApplyTurretRotation();
 
         UpdateTargeting();
+    }
+
+    private void ApplyTurretRotation()
+    {
+        if (turretTransform == null || cannonTransform == null)
+            return;
+
+        bool sharedTurretAndCannon = turretTransform == cannonTransform;
+
+        Vector3 localYawAxis = GetAxisVector(turretYawAxis);
+        Quaternion yawRotation = Quaternion.AngleAxis(turretYawOffset, localYawAxis);
+        Quaternion targetTurretRotation = turretBaseLocalRotation * yawRotation;
+
+        turretTransform.localRotation = targetTurretRotation;
+
+        if (!sharedTurretAndCannon)
+            cannonTransform.localRotation = cannonBaseLocalRotation;
     }
 
     public Vector3 GetAimDirection()
@@ -143,39 +142,15 @@ public class AimController: MonoBehaviour
         return hasValidTarget;
     }
 
-    private static float NormalizeSignedAngle(float angle)
-    {
-        angle %= 360f;
-        if (angle > 180f) angle -= 360f;
-        return angle;
-    }
-
-    private static float GetAxisValue(Vector3 euler, Axis axis)
+    private static Vector3 GetAxisVector(Axis axis)
     {
         switch (axis)
         {
-            case Axis.X: return euler.x;
-            case Axis.Y: return euler.y;
-            default: return euler.z;
-        }
-    }
-
-    private static Vector3 SetAxisValue(Vector3 euler, Axis axis, float value)
-    {
-        switch (axis)
-        {
-            case Axis.X:
-                euler.x = value;
-                break;
-            case Axis.Y:
-                euler.y = value;
-                break;
+            case Axis.X: return Vector3.right;
+            case Axis.Y: return Vector3.up;
             default:
-                euler.z = value;
-                break;
+                return Vector3.forward;
         }
-
-        return euler;
     }
 
     private Vector3 ResolveBestAimDirection(Transform source)
@@ -320,4 +295,44 @@ public class AimController: MonoBehaviour
         hit = default;
         return false;
     }
+
+    private static Camera ResolveGameplayCamera()
+    {
+        Camera taggedMain = Camera.main;
+        if (IsGameplayCamera(taggedMain))
+            return taggedMain;
+
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera candidate = cameras[i];
+            if (candidate == null)
+                continue;
+
+            if (candidate.name.Contains("PlayerCamera"))
+                return candidate;
+        }
+
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera candidate = cameras[i];
+            if (IsGameplayCamera(candidate))
+                return candidate;
+        }
+
+        return taggedMain;
+    }
+
+    private static bool IsGameplayCamera(Camera camera)
+    {
+        if (camera == null || !camera.isActiveAndEnabled)
+            return false;
+
+        string cameraName = camera.name.ToLowerInvariant();
+        if (cameraName.Contains("minimap"))
+            return false;
+
+        return true;
+    }
+
 }

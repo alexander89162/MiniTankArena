@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
+using System.Collections.Generic;
 
 public class HUDController : MonoBehaviour
 {
@@ -19,7 +21,7 @@ public class HUDController : MonoBehaviour
 
     private bool minimapMarkerCleaned;
     private MinimapPlayerMarker minimapPlayerMarker;
-    private MinimapEnemyMarker minimapEnemyMarker;
+    private readonly List<MinimapEnemyMarker> minimapEnemyMarkers = new List<MinimapEnemyMarker>();
 
     [Header("Layout")]
     [SerializeField] private bool bulletCountOnRight = true;
@@ -51,7 +53,7 @@ public class HUDController : MonoBehaviour
     private float nextTargetResolveTime;
     private float nextEnemyResolveTime;
     private Transform cachedMinimapTarget;
-    private Transform cachedEnemyTarget;
+    private readonly List<Transform> cachedEnemyTargets = new List<Transform>();
 
     void Awake()
     {
@@ -427,49 +429,95 @@ public class HUDController : MonoBehaviour
         if (playerTarget == null)
             return;
 
-        Transform enemyTarget = ResolveEnemyTargetTransform(playerTarget);
+        List<Transform> enemyTargets = ResolveEnemyTargetTransforms(playerTarget);
 
-        if (enemyTarget == null)
+        if (enemyTargets.Count == 0)
         {
-            if (minimapEnemyMarker != null)
-                minimapEnemyMarker.gameObject.SetActive(false);
+            for (int i = 0; i < minimapEnemyMarkers.Count; i++)
+            {
+                MinimapEnemyMarker marker = minimapEnemyMarkers[i];
+                if (marker != null)
+                    marker.gameObject.SetActive(false);
+            }
             return;
         }
 
-        if (minimapEnemyMarker == null)
-            minimapEnemyMarker = GetOrCreateEnemyMarker(minimapRoot);
+        EnsureEnemyMarkerPool(minimapRoot, enemyTargets.Count);
 
-        if (minimapEnemyMarker == null)
-            return;
+        for (int i = 0; i < minimapEnemyMarkers.Count; i++)
+        {
+            MinimapEnemyMarker marker = minimapEnemyMarkers[i];
+            if (marker == null)
+                continue;
 
-        minimapEnemyMarker.SetTarget(enemyTarget);
-        minimapEnemyMarker.SetPlayerReference(playerTarget);
-        minimapEnemyMarker.SetRadarOverlay(minimapRadarOverlay);
-        minimapEnemyMarker.gameObject.SetActive(true);
-
-        ApplyEnemyMarkerStyle(minimapEnemyMarker);
-        minimapEnemyMarker.transform.SetAsLastSibling();
+            if (i < enemyTargets.Count)
+            {
+                marker.SetTarget(enemyTargets[i]);
+                marker.SetPlayerReference(playerTarget);
+                marker.SetRadarOverlay(minimapRadarOverlay);
+                marker.gameObject.SetActive(true);
+                ApplyEnemyMarkerStyle(marker);
+                marker.transform.SetAsLastSibling();
+            }
+            else
+            {
+                marker.gameObject.SetActive(false);
+            }
+        }
 
         if (minimapPlayerMarker != null)
             minimapPlayerMarker.transform.SetAsLastSibling();
     }
 
-    Transform ResolveEnemyTargetTransform(Transform playerTarget)
+    void EnsureEnemyMarkerPool(RectTransform minimapRoot, int requiredCount)
     {
-        GameObject taggedEnemy = TryFindTaggedEnemy();
-        if (taggedEnemy != null)
+        for (int i = minimapEnemyMarkers.Count - 1; i >= 0; i--)
         {
-            cachedEnemyTarget = taggedEnemy.transform;
-            return cachedEnemyTarget;
+            if (minimapEnemyMarkers[i] == null)
+                minimapEnemyMarkers.RemoveAt(i);
         }
 
-        if (cachedEnemyTarget != null && cachedEnemyTarget.gameObject.activeInHierarchy && cachedEnemyTarget != playerTarget)
-            return cachedEnemyTarget;
+        MinimapEnemyMarker[] existingMarkers = minimapRoot.GetComponentsInChildren<MinimapEnemyMarker>(true);
+        for (int i = 0; i < existingMarkers.Length; i++)
+        {
+            MinimapEnemyMarker existingMarker = existingMarkers[i];
+            if (existingMarker != null && !minimapEnemyMarkers.Contains(existingMarker))
+                minimapEnemyMarkers.Add(existingMarker);
+        }
 
+        while (minimapEnemyMarkers.Count < requiredCount)
+        {
+            MinimapEnemyMarker marker = CreateEnemyMarker(minimapRoot, minimapEnemyMarkers.Count + 1);
+            if (marker == null)
+                break;
+
+            minimapEnemyMarkers.Add(marker);
+        }
+
+        minimapEnemyMarkers.Sort((left, right) =>
+        {
+            if (left == null && right == null)
+                return 0;
+            if (left == null)
+                return 1;
+            if (right == null)
+                return -1;
+            return left.transform.GetSiblingIndex().CompareTo(right.transform.GetSiblingIndex());
+        });
+    }
+
+    List<Transform> ResolveEnemyTargetTransforms(Transform playerTarget)
+    {
         if (Time.unscaledTime < nextEnemyResolveTime)
-            return cachedEnemyTarget;
+            return cachedEnemyTargets;
 
         nextEnemyResolveTime = Time.unscaledTime + 0.75f;
+        cachedEnemyTargets.Clear();
+
+        HashSet<int> seenIds = new HashSet<int>();
+
+        TryFindTaggedEnemies(cachedEnemyTargets, seenIds, "Enemy", playerTarget);
+        TryFindTaggedEnemies(cachedEnemyTargets, seenIds, "enemy", playerTarget);
 
         TankController[] tanks = FindObjectsByType<TankController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         for (int i = 0; i < tanks.Length; i++)
@@ -479,38 +527,51 @@ public class HUDController : MonoBehaviour
                 continue;
 
             Transform candidateTransform = candidate.transform;
-            if (candidateTransform == playerTarget)
+            if (candidateTransform == null || candidateTransform == playerTarget)
                 continue;
 
-            if (HasTagSafe(candidateTransform.gameObject, "Player") || HasTagSafe(candidateTransform.gameObject, "player"))
+            GameObject candidateObject = candidateTransform.gameObject;
+            if (HasTagSafe(candidateObject, "Player") || HasTagSafe(candidateObject, "player"))
                 continue;
 
-            if (candidateTransform.name.Contains("minitank-processed-v3"))
-            {
-                cachedEnemyTarget = candidateTransform;
-                return cachedEnemyTarget;
-            }
+            int instanceId = candidateObject.GetInstanceID();
+            if (!seenIds.Add(instanceId))
+                continue;
 
-            if (cachedEnemyTarget == null)
-                cachedEnemyTarget = candidateTransform;
+            cachedEnemyTargets.Add(candidateTransform);
         }
 
-        return cachedEnemyTarget;
+        return cachedEnemyTargets;
     }
 
-    static GameObject TryFindTaggedEnemy()
+    void TryFindTaggedEnemies(List<Transform> targets, HashSet<int> seenIds, string tag, Transform playerTarget)
     {
-        GameObject taggedEnemy = null;
+        GameObject[] taggedEnemies = Array.Empty<GameObject>();
 
         try
         {
-            taggedEnemy = GameObject.FindGameObjectWithTag("Enemy");
+            taggedEnemies = GameObject.FindGameObjectsWithTag(tag);
         }
         catch (UnityException)
         {
         }
 
-        return taggedEnemy;
+        for (int i = 0; i < taggedEnemies.Length; i++)
+        {
+            GameObject taggedEnemy = taggedEnemies[i];
+            if (taggedEnemy == null)
+                continue;
+
+            Transform enemyTransform = taggedEnemy.transform;
+            if (enemyTransform == null || enemyTransform == playerTarget)
+                continue;
+
+            int instanceId = taggedEnemy.GetInstanceID();
+            if (!seenIds.Add(instanceId))
+                continue;
+
+            targets.Add(enemyTransform);
+        }
     }
 
     static bool HasTagSafe(GameObject gameObject, string tag)
@@ -528,17 +589,9 @@ public class HUDController : MonoBehaviour
         }
     }
 
-    MinimapEnemyMarker GetOrCreateEnemyMarker(RectTransform minimapRoot)
+    MinimapEnemyMarker CreateEnemyMarker(RectTransform minimapRoot, int markerIndex)
     {
-        MinimapEnemyMarker existing = minimapRoot.GetComponentInChildren<MinimapEnemyMarker>(true);
-        if (existing != null)
-        {
-            if (existing.GetComponent<TextMeshProUGUI>() == null)
-                existing.gameObject.AddComponent<TextMeshProUGUI>();
-            return existing;
-        }
-
-        GameObject markerObject = new GameObject("EnemyMarker", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(MinimapEnemyMarker));
+        GameObject markerObject = new GameObject($"EnemyMarker_{markerIndex}", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(MinimapEnemyMarker));
         markerObject.transform.SetParent(minimapRoot, false);
 
         RectTransform markerRect = markerObject.GetComponent<RectTransform>();

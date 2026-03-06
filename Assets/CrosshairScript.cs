@@ -42,6 +42,9 @@ public class CrosshairScript : MonoBehaviour
     [Tooltip("Crosshair color")]
     [SerializeField] private Color crosshairColor = Color.white;
 
+    [Tooltip("Optional custom sprite for the crosshair image")]
+    [SerializeField] private Sprite crosshairSprite;
+
     [Tooltip("Inner ring color when aiming at enemy")]
     [SerializeField] private Color enemyInnerRingColor = new Color(1f, 0.18f, 0.18f, 1f);
 
@@ -82,7 +85,7 @@ public class CrosshairScript : MonoBehaviour
         // Get main camera if not assigned
         if (mainCamera == null)
         {
-            mainCamera = Camera.main;
+            mainCamera = ResolveGameplayCamera();
         }
         
         // Auto-find AimController fallback if not assigned
@@ -97,6 +100,9 @@ public class CrosshairScript : MonoBehaviour
         // Apply visual settings
         if (crosshairImage != null)
         {
+            if (crosshairSprite != null)
+                crosshairImage.sprite = crosshairSprite;
+
             crosshairImage.color = crosshairColor;
         }
 
@@ -157,6 +163,45 @@ public class CrosshairScript : MonoBehaviour
         {
             return null;
         }
+    }
+
+    static Camera ResolveGameplayCamera()
+    {
+        Camera taggedMain = Camera.main;
+        if (IsGameplayCamera(taggedMain))
+            return taggedMain;
+
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera candidate = cameras[i];
+            if (candidate == null)
+                continue;
+
+            if (candidate.name.Contains("PlayerCamera"))
+                return candidate;
+        }
+
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera candidate = cameras[i];
+            if (IsGameplayCamera(candidate))
+                return candidate;
+        }
+
+        return taggedMain;
+    }
+
+    static bool IsGameplayCamera(Camera camera)
+    {
+        if (camera == null || !camera.isActiveAndEnabled)
+            return false;
+
+        string cameraName = camera.name.ToLowerInvariant();
+        if (cameraName.Contains("minimap"))
+            return false;
+
+        return true;
     }
 
     void Update()
@@ -398,5 +443,12 @@ public class CrosshairScript : MonoBehaviour
         {
             rectTransform.localScale = Vector3.one * size;
         }
+    }
+
+    public void SetCrosshairSprite(Sprite sprite)
+    {
+        crosshairSprite = sprite;
+        if (crosshairImage != null && sprite != null)
+            crosshairImage.sprite = sprite;
     }
 }
