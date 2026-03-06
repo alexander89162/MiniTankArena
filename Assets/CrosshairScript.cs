@@ -11,10 +11,7 @@ public class CrosshairScript : MonoBehaviour
     }
 
     [Header("Crosshair Settings")]
-    [Tooltip("The TargetingSystem for 3rd person aiming")]
-    [SerializeField] private TargetingSystem targetingSystem;
-
-    [Tooltip("Fallback aim source when no TargetingSystem is assigned")]
+    [Tooltip("Aim source for targeting and fallback raycasts")]
     [SerializeField] private AimController aimController;
     
     [Tooltip("The main camera (usually assigned automatically)")]
@@ -88,25 +85,14 @@ public class CrosshairScript : MonoBehaviour
             mainCamera = Camera.main;
         }
         
-        // Auto-find TargetingSystem if not assigned
-        if (targetingSystem == null)
-        {
-            targetingSystem = FindFirstObjectByType<TargetingSystem>();
-            if (targetingSystem != null)
-            {
-                Debug.Log("CrosshairScript: Auto-found TargetingSystem");
-            }
-            else
-            {
-                Debug.LogWarning("CrosshairScript: No TargetingSystem found in scene. Add one to your player tank.");
-            }
-        }
-
         // Auto-find AimController fallback if not assigned
         if (aimController == null)
         {
-            aimController = FindFirstObjectByType<AimController>();
+            aimController = ResolvePreferredAimController();
         }
+
+        if (aimController == null)
+            Debug.LogWarning("CrosshairScript: No AimController found in scene. Add one to your player tank.");
         
         // Apply visual settings
         if (crosshairImage != null)
@@ -125,6 +111,52 @@ public class CrosshairScript : MonoBehaviour
         // Hide system cursor
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    AimController ResolvePreferredAimController()
+    {
+        GameObject preferredGreenTank = FindPreferredGreenTankObject();
+        if (preferredGreenTank != null)
+        {
+            AimController preferredAim = preferredGreenTank.GetComponentInChildren<AimController>(true);
+            if (preferredAim != null)
+                return preferredAim;
+        }
+
+        AimController localAim = GetComponentInParent<AimController>();
+        if (localAim != null)
+            return localAim;
+
+        GameObject taggedPlayer = TryFindTaggedObject("Player");
+        if (taggedPlayer != null)
+        {
+            AimController playerAim = taggedPlayer.GetComponentInChildren<AimController>(true);
+            if (playerAim != null)
+                return playerAim;
+        }
+
+        return FindFirstObjectByType<AimController>();
+    }
+
+    static GameObject FindPreferredGreenTankObject()
+    {
+        GameObject preferred = GameObject.Find("minitank-v10-green 1");
+        if (preferred != null)
+            return preferred;
+
+        return GameObject.Find("minitank-v10-green");
+    }
+
+    static GameObject TryFindTaggedObject(string tag)
+    {
+        try
+        {
+            return GameObject.FindGameObjectWithTag(tag);
+        }
+        catch (UnityException)
+        {
+            return null;
+        }
     }
 
     void Update()
@@ -156,9 +188,9 @@ public class CrosshairScript : MonoBehaviour
     {
         Vector3 targetPosition;
 
-        if (targetingSystem != null && targetingSystem.HasValidTarget())
+        if (aimController != null && aimController.HasValidTarget())
         {
-            targetPosition = targetingSystem.GetTargetPosition();
+            targetPosition = aimController.GetTargetPosition();
         }
         else if (aimController != null)
         {
