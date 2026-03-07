@@ -10,13 +10,14 @@ public class TreadsAnimator : MonoBehaviour
     public Renderer targetRenderer;
 
     [Header("Scroll Settings")]
-    public float scrollSpeed = 0.6f;
+    public float scrollSpeed = 0.025f;
     public Vector2 scrollDirection = new Vector2(1, 0);
     public float scrollProgress = 0; // value from 0-1 wrapping the tread animation
     public float scrollThreshold = 0.65f; // lower limit for y-coordinate of UVs that will be scrolled
     public InputAction moveAction;
 
     private MaterialPropertyBlock propertyBlock;
+    private Vector3 lastPosition;
 
     // Cache property IDs
     private static readonly int ScrollProgressID = Shader.PropertyToID("_ScrollProgress");
@@ -29,6 +30,7 @@ public class TreadsAnimator : MonoBehaviour
             targetRenderer = GetComponent<Renderer>();
         
         propertyBlock = new MaterialPropertyBlock();
+        lastPosition = transform.position;
     }
 
     void OnEnable()
@@ -47,10 +49,15 @@ public class TreadsAnimator : MonoBehaviour
     {
         // compute new scroll progress based on current velocity and user input (new input system)
         Vector2 input = moveAction.ReadValue<Vector2>();
-        float forward = input.y * scrollSpeed * Time.deltaTime;
+
+        Vector3 velocity = (transform.position - lastPosition) / Time.deltaTime;
+        float forward = Vector3.Dot(velocity, transform.forward) * scrollSpeed * Time.deltaTime;
+        //float forward = input.y * scrollSpeed * Time.deltaTime;
 
         scrollProgress += forward;
         scrollProgress %= 1;
+
+        lastPosition = transform.position;
 
         ApplyScroll();
     }
