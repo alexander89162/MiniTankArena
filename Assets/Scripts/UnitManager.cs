@@ -21,8 +21,8 @@ public class UnitManager : MonoBehaviour
     [SerializeField] private List<GameObject> prefabList;
     private Dictionary<string, GameObject> prefabLookup;
     private List<UnitData> unitHandles; // list of all units in the current wave
-    private WaveState currentState;
-    private string currentWave { get; set; }
+    private WaveState currentState = WaveState.Allocating;
+    private string currentWave;
     private string waveMode;
     [SerializeField] private float minInterWaveTime = 10f; // min time to wait between waves
     private float interWaveTimer = 0f;
@@ -38,6 +38,7 @@ public class UnitManager : MonoBehaviour
     public class WaveConfigFile
     {
         public string waveMode;
+        public string startWave;
         public Transition[] transitions;
     }
 
@@ -69,6 +70,7 @@ public class UnitManager : MonoBehaviour
     }
 
     public event Action OnVictory;
+    public bool debug = false;
 
     void Awake()
     {
@@ -136,6 +138,8 @@ public class UnitManager : MonoBehaviour
         "Waves",
         mapName
         );
+
+        if (debug) Debug.Log("waveContentsPath was set to " + waveContentsPath);
     }
 
     public void UpdateWave()
@@ -156,6 +160,8 @@ public class UnitManager : MonoBehaviour
 
     public void SpawnUnit()
     {
+        if (debug) Debug.Log("SpawnUnit() invoked on " + currentWave);
+        
         UnitData data = spawnQueue.Dequeue();
         UnitConfig config = data.config;
 
@@ -167,14 +173,17 @@ public class UnitManager : MonoBehaviour
     private IEnumerator StartAllocating()
     /*Start coroutine to allocate memory for next wave's units*/
     {
-        currentWave = FindNextWave(currentWave); // set next wave - it can be sequential or procedurally chosen
+        if (debug) Debug.Log("StartAllocating() invoked on " + currentWave);
+
         yield return StartCoroutine(LoadWave()); // Before allocation, unitHandles will be up-to-date with wave info from the current wave JSON
         yield return StartCoroutine(AllocateUnits()); // here we actually create the next wave's units
     }
 
     private IEnumerator LoadWave()
     {
-        string path = System.IO.Path.Combine(waveContentsPath, currentWave);
+        if (debug) Debug.Log("LoadWave() invoked on " + currentWave);
+
+        string path = System.IO.Path.Combine(waveContentsPath, String.Concat(currentWave, ".json"));
 
         UnityWebRequest request = UnityWebRequest.Get(path);
         yield return request.SendWebRequest();
@@ -194,9 +203,11 @@ public class UnitManager : MonoBehaviour
     }
 
     private IEnumerator LoadWaveConfigurations()
-    /*Load the waveconfig.json and set WaveMode. Set wavetransitions to null if 
-    sequential and fill the mappings based on the JSON if procedural*/
+    /*Load the waveconfig.json and set WaveMode. Fill the transitions dictionary
+    based on the JSON if wave mode is procedural*/
     {
+        if (debug) Debug.Log("LoadWaveConfigurations() invoked on " + currentWave);
+
         string path = System.IO.Path.Combine(
             waveContentsPath,
             "waveconfig.json"
@@ -226,12 +237,19 @@ public class UnitManager : MonoBehaviour
             {
                 waveTransitions[t.from] = t.to;
             }
+            currentWave = config.startWave;
+        } 
+        else
+        {
+            currentWave = "wave1";
         }
     }
 
     public void FillUnitHandles(WaveDefinition wave)
     /*Fill unitHandles based on JSON file of current wave*/
     {
+        if (debug) Debug.Log("FillUnitHandles() invoked on " + currentWave);
+
         // Fill unitHandles with new data
         unitHandles.Clear();
         for (int i = 0; i < wave.unitConfigs.Length; i++)
@@ -249,16 +267,22 @@ public class UnitManager : MonoBehaviour
     /* Create all the GameObjects needed for the next wave. This is done in
     small batches to avoid freezing the UI while allocation is in progress*/
     {
+        if (debug) Debug.Log("AllocateUnits() invoked on " + currentWave);
+
         int waveSize = unitHandles.Count;
         for (int i = 0; i < waveSize; i++)
         {
             UnitConfig config = unitHandles[i].config;
-            GameObject unitPrefab = prefabLookup[config.prefabName];
+            if (!prefabLookup.TryGetValue(config.prefabName, out GameObject unitPrefab))
+            {
+                Debug.LogError("The prefab \"" + config.prefabName + "\" was skipped because it was not found.");
+                continue;
+            }
             GameObject unit = Instantiate(unitPrefab);
             unitHandles[i].gameObject = unit;
             unit.SetActive(false);
 
-            if (i % batchSize == 0)
+            if (i % batchSize == 0) // yield on first iteration is OK here and on purpose
                 yield return null;
         }
 
@@ -274,6 +298,8 @@ public class UnitManager : MonoBehaviour
     private void BuildSpawnQueue()
     /*Fill the spawn queue so it's ready for the wave to use*/
     {
+        if (debug) Debug.Log("BuildSpawnQueue() invoked on " + currentWave);
+
         spawnQueue.Clear();
 
         foreach (var unit in unitHandles)
@@ -291,6 +317,8 @@ public class UnitManager : MonoBehaviour
     public void DeallocateWave()
     /*Destroy all the GameObjects in unitHandles, then clear list*/
     {
+        if (debug) Debug.Log("DeallocateWave() invoked on " + currentWave);
+
         foreach (var unit in unitHandles)
         {
             Destroy(unit.gameObject);
@@ -315,12 +343,19 @@ public class UnitManager : MonoBehaviour
 
     public string FindNextWave(string previous)
     {
+        if (debug) Debug.Log("FindNextWave() invoked on " + currentWave);
+
         switch (waveMode.ToLower())
         {
             case "sequential":
-                int lastWaveNum = int.Parse(previous.Substring(4));
+                if (!int.TryParse(previous.Substring(4), out int lastWaveNum))
+                {
+                    Debug.LogError("Invalid wave name: " + previous);
+                    return null;
+                }
                 return "wave" + (lastWaveNum + 1);
             case "procedural":
+                if (debug) Debug.Log("Previous wave: " + (previous ?? "NULL"));
                 if (waveTransitions != null && waveTransitions.TryGetValue(previous, out string next))
                     return next;
                 Debug.LogWarning("Error: No procedural transition was found for " + currentWave);
@@ -331,5 +366,9 @@ public class UnitManager : MonoBehaviour
         }
     }
     
-    public void SetState(WaveState newState) { currentState = newState; }
+    public void SetState(WaveState newState)
+    {
+        if (debug) Debug.Log("UnitManager changed state from " + currentState + " to " + newState);
+        currentState = newState;
+    }
 }

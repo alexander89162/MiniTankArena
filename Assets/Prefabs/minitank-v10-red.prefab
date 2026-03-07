@@ -369,6 +369,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8460799042929922628}
+  - component: {fileID: 3482883437899691364}
   m_Layer: 0
   m_Name: minitank-v10-red
   m_TagString: Untagged
@@ -395,3 +396,29 @@ Transform:
   - {fileID: 4124694027783412777}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 190.247, z: 0}
+--- !u!114 &3482883437899691364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8931809357140288130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18ebc428c1dee244b8c90ccbde45664c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TreadsAnimator
+  targetRenderer: {fileID: 3630678727065972160}
+  scrollSpeed: 0.025
+  scrollDirection: {x: 1, y: 0}
+  scrollProgress: 0
+  scrollThreshold: 0.65
+  moveAction:
+    m_Name: Move
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 20f21a10-33d0-4d00-ab5a-4b1b0b0bc6cd
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings: []
+    m_Flags: 0
