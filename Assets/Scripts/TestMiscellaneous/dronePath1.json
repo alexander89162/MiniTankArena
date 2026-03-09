@@ -1,0 +1,38 @@
+{
+    "intermediateMovements": [
+        {
+            "startVelocity": 35.0,
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "startPosition": { "x": 0.0, "y": 0.0, "z": 0.0 },
+            "endPosition": { "x": 20.0, "y": 10.0, "z": 85.0 },
+            "targetRotation": { "x": -90.0, "y": 0.0, "z": 0.0 },
+            "rotationType": "linear"
+        },
+        {
+            "startVelocity": 40.0,
+            "endVelocity": 20.0,
+            "accelerationType": "quadratic",
+            "startPosition": { "x": 20.0, "y": 10.0, "z": 85.0 },
+            "endPosition": { "x": 22.0, "y": 45.0, "z": 120.0 },
+            "targetRotation": { "x": -90.0, "y": 0.0, "z": 90.0 },
+            "rotationType": "Slerp"
+        }
+    ],
+
+    "stoppingConfiguration":
+    {
+        "breakingManeuvers": [
+            {
+            "rotation": { "x": 0.0, "y": 45.0, "z": 0.0 },
+            "duration": 1.5,
+            "outwardMove": 3.2
+            },
+            {
+                "rotation": { "x": 0.0, "y": -30.0, "z": 0.0 },
+                "duration": 0.8,
+                "outwardMove": 1.5
+            }
+        ]
+    }
+}
