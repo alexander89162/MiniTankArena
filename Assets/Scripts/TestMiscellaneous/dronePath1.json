@@ -1,57 +1,116 @@
 {
-    "intermediateMovements": [
+    "movements": [
         {
-            "moveId": 1,
-            "startPosition": { "x": 0.0, "y": 0.0, "z": 0.0 },
-            "endPosition": { "x": 20.0, "y": 10.0, "z": 85.0 },
-            "startVelocity": 35.0,
+            "moveId": -1,
+            "position": { "x": 1051.5, "y": 635.0, "z": 2167.0 },
+            "rotation": { "x": 0.0, "y": 16.6, "z": 0 },
+            "endVelocity": 40.0,
+            "accelerationType": "n/a",
+            "rotationType": "n/a"
+        },
+        {
+            "moveId": 0,
+            "position": { "x": 197.4, "y": 607.4, "z": 1479.6 },
+            "rotation": { "x": -118.7, "y": 16.6, "z": 0.0 },
             "endVelocity": 40.0,
             "accelerationType": "linear",
-            "targetRotation": { "x": -90.0, "y": 0.0, "z": 0.0 },
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 1,
+            "position": { "x": 83.4, "y": 692.4, "z": 1096.6 },
+            "rotation": { "x": -122.0, "y": 16.6, "z": 0.0 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
             "rotationType": "linear"
         },
         {
             "moveId": 2,
-            "startPosition": { "x": 20.0, "y": 10.0, "z": 85.0 },
-            "endPosition": { "x": 22.0, "y": 45.0, "z": 120.0 },
-            "startVelocity": 40.0,
-            "endVelocity": 20.0,
-            "accelerationType": "quadratic",
-            "targetRotation": { "x": -90.0, "y": 0.0, "z": 90.0 },
-            "rotationType": "Slerp"
+            "position": { "x": -44.7, "y": 692.8, "z": 667.2 },
+            "rotation": { "x": -141.1, "y": 16.6, "z": 0.0 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 3,
+            "position": { "x": -129.6, "y": 494.7, "z": 382.6 },
+            "rotation": { "x": -122.0, "y": 16.6, "z": 0.0 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 4,
+            "position": { "x": -185.5, "y": 345.5, "z": 198.8 },
+            "rotation": { "x": -122.0, "y": 59.1, "z": -37.8 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 5,
+            "position": { "x": -264.5, "y": 261.5, "z": -65.2 },
+            "rotation": { "x": -132.5, "y": 102.1, "z": -83.8 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 6,
+            "position": { "x": -397.4, "y": 220.0, "z": -248.0 },
+            "rotation": { "x": -116.0, "y": 155.6, "z": -84.4 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 7,
+            "position": { "x": -583.4, "y": 180.4, "z": -298.6 },
+            "rotation": { "x": -120.7, "y": -153.8, "z": 276.7 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
+        },
+        {
+            "moveId": 8,
+            "position": { "x": -779.4, "y": 133.4, "z": -167.0 },
+            "rotation": { "x": -94.0, "y": 16.6, "z": 186.0 },
+            "endVelocity": 40.0,
+            "accelerationType": "linear",
+            "rotationType": "linear"
         }
     ],
 
-    "stoppingConfiguration": {
-        "breakingManeuvers": [
-            {
-            "rotation": { "x": 0.0, "y": 45.0, "z": 0.0 },
-            "duration": 1.5,
-            "outwardMove": 3.2
-            },
-            {
-                "rotation": { "x": 0.0, "y": -30.0, "z": 0.0 },
-                "duration": 0.8,
-                "outwardMove": 1.5
-            }
-        ]
-    },
+
+    "brakingManeuvers": [
+        {
+        "rotation": { "x": 0.0, "y": 45.0, "z": 0.0 },
+        "duration": 1.5,
+        "outwardMove": 3.2
+        },
+        {
+            "rotation": { "x": 0.0, "y": -30.0, "z": 0.0 },
+            "duration": 0.8,
+            "outwardMove": 1.5
+        }
+    ],
 
     "deploymentActions": [
         {
             "action": "open-door",
-            "activationNode": 2,
+            "activationNode": 8,
             "startDelay": 2.0,
             "duration": 1.4
         },
         {
             "action": "unfreeze-units",
-            "activationNode": 2,
+            "activationNode": 8,
             "startDelay": 2.1
         },
         {
             "action": "close-door",
-            "activationNode": 2,
+            "activationNode": 8,
             "startDelay": 4.5,
             "duration": 1.4
         }
