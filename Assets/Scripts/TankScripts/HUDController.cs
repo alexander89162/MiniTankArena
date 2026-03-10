@@ -517,7 +517,6 @@ public class HUDController : MonoBehaviour
         HashSet<int> seenIds = new HashSet<int>();
 
         TryFindTaggedEnemies(cachedEnemyTargets, seenIds, "Enemy", playerTarget);
-        TryFindTaggedEnemies(cachedEnemyTargets, seenIds, "enemy", playerTarget);
 
         TankController[] tanks = FindObjectsByType<TankController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         for (int i = 0; i < tanks.Length; i++)

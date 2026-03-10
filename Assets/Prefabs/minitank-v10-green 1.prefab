@@ -319,7 +319,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AimController
   aimDeltaAction: {fileID: 5891516213317709028, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   aimSensitivity: 1
-  turretTurnSpeed: 55
+  turretTurnSpeed: 95
   turretTransform: {fileID: 852596438122365689}
   cannonTransform: {fileID: 8130457745370928924}
   turretYawAxis: 1

@@ -32,6 +32,9 @@ public class CrosshairScript : MonoBehaviour
     [Tooltip("Draw debug ray for AimController fallback")]
     [SerializeField] private bool showDebugRay = false;
 
+    [Tooltip("How often to retry finding the active AimController when missing")]
+    [SerializeField] private float aimResolveInterval = 0.5f;
+
     [Tooltip("Layer mask for center-screen target classification")]
     [SerializeField] private LayerMask detectionLayerMask = -1;
 
@@ -58,6 +61,7 @@ public class CrosshairScript : MonoBehaviour
     private Image crosshairImage;
     private Image innerRingImage;
     private Canvas canvas;
+    private float nextAimResolveTime;
 
     private static Sprite cachedInnerRingSprite;
     
@@ -208,6 +212,8 @@ public class CrosshairScript : MonoBehaviour
     {
         if (rectTransform == null || mainCamera == null)
             return;
+
+        EnsureAimControllerReference();
         
         if (lockToCenter)
         {
@@ -240,9 +246,15 @@ public class CrosshairScript : MonoBehaviour
         else if (aimController != null)
         {
             Vector3 aimDirection = aimController.GetAimDirection().normalized;
-            Vector3 rayOrigin = aimController.transform.position + aimDirection * muzzleForwardOffset;
+            Transform raySource = aimController.GetCannonTransform();
+            if (raySource == null)
+                raySource = aimController.GetTurretTransform();
 
-            if (Physics.Raycast(rayOrigin, aimDirection, out RaycastHit hit, maxAimDistance, aimLayerMask))
+            Vector3 rayOrigin = (raySource != null ? raySource.position : aimController.transform.position) + aimDirection * muzzleForwardOffset;
+
+            bool hitFound = TryRaycastIgnoringAimControllerSelf(rayOrigin, aimDirection, maxAimDistance, aimLayerMask, out RaycastHit hit);
+
+            if (hitFound)
             {
                 targetPosition = hit.point;
             }
@@ -282,6 +294,48 @@ public class CrosshairScript : MonoBehaviour
             // Point is behind camera, keep at center
             CenterCrosshair();
         }
+    }
+
+    void EnsureAimControllerReference()
+    {
+        if (aimController != null && aimController.isActiveAndEnabled && aimController.gameObject.activeInHierarchy)
+            return;
+
+        if (Time.unscaledTime < nextAimResolveTime)
+            return;
+
+        aimController = ResolvePreferredAimController();
+        nextAimResolveTime = Time.unscaledTime + Mathf.Max(0.1f, aimResolveInterval);
+    }
+
+    bool TryRaycastIgnoringAimControllerSelf(Vector3 origin, Vector3 direction, float distance, int mask, out RaycastHit hit)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction, distance, mask, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+        {
+            hit = default;
+            return false;
+        }
+
+        System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+        Transform selfRoot = aimController != null ? aimController.transform.root : null;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider candidateCollider = hits[i].collider;
+            if (candidateCollider == null)
+                continue;
+
+            Transform candidate = candidateCollider.transform;
+            if (selfRoot != null && candidate != null && candidate.IsChildOf(selfRoot))
+                continue;
+
+            hit = hits[i];
+            return true;
+        }
+
+        hit = default;
+        return false;
     }
     
     void OnDestroy()
@@ -352,7 +406,7 @@ public class CrosshairScript : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, detectionDistance, detectionLayerMask))
             return CrosshairTargetState.Default;
 
-        if (HasTagInHierarchy(hit.transform, "Enemy") || HasTagInHierarchy(hit.transform, "enemy"))
+        if (HasTagInHierarchy(hit.transform, "Enemy"))
             return CrosshairTargetState.Enemy;
 
         return CrosshairTargetState.Obstacle;

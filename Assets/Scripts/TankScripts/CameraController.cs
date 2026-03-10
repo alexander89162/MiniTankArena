@@ -16,6 +16,7 @@ public class CameraController : MonoBehaviour
     [SerializeField] float minPitch = -8f;
     [SerializeField] float maxPitch = 35f;
     [SerializeField] float lookAtHeight = 1.25f;
+    [SerializeField] bool invertLookY = true;
 
     //Private variable to hold rotation
     private float yaw = 0;
@@ -80,7 +81,8 @@ public class CameraController : MonoBehaviour
 
         // Accumulate RELATIVE rotations (mouse/stick)
         yaw += look.x * rotationSpeed * Time.deltaTime;
-        float pitchInput = look.y * rotationSpeed * Time.deltaTime;
+        float pitchDelta = look.y * rotationSpeed * Time.deltaTime;
+        float pitchInput = invertLookY ? -pitchDelta : pitchDelta;
 
         pitch += pitchInput;
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);

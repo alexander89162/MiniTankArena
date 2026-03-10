@@ -16,6 +16,7 @@ public class AimController: MonoBehaviour
     //Variables to set users aim
     [SerializeField] float aimSensitivity = 4f;
     [SerializeField] float turretTurnSpeed = 120f;
+    [SerializeField] bool clampYawRate = false;
     [SerializeField] float maxYawRate = 180f;
 
     //grabs the obejects to transform
@@ -24,6 +25,10 @@ public class AimController: MonoBehaviour
 
     [Header("Axis Setup")]
     [SerializeField] Axis turretYawAxis = Axis.Y;
+
+    [SerializeField] bool yawInParentSpace = true;
+
+    [SerializeField] bool stabilizeVisualPivot = true;
 
     [SerializeField] bool autoResolveAimAxis = true;
 
@@ -41,7 +46,10 @@ public class AimController: MonoBehaviour
     private Vector2 aimInput;
     private float turretYawOffset;
     private Quaternion turretBaseLocalRotation;
+    private Vector3 turretBaseLocalPosition;
     private Quaternion cannonBaseLocalRotation;
+    private Vector3 visualPivotLocal;
+    private bool hasVisualPivot;
     private Vector3 resolvedLocalAimAxis = Vector3.forward;
     private bool hasResolvedAimAxis;
     private Vector3 cameraTarget;
@@ -51,7 +59,11 @@ public class AimController: MonoBehaviour
     void Awake()
     {
         if (turretTransform != null)
+        {
             turretBaseLocalRotation = turretTransform.localRotation;
+            turretBaseLocalPosition = turretTransform.localPosition;
+            hasVisualPivot = TryComputeVisualPivotLocal(turretTransform, out visualPivotLocal);
+        }
 
         if (cannonTransform != null)
             cannonBaseLocalRotation = cannonTransform.localRotation;
@@ -70,8 +82,8 @@ public class AimController: MonoBehaviour
         aimInput = aimDeltaAction?.action?.ReadValue<Vector2>() ?? Vector2.zero;
 
         float rawYawRate = aimInput.x * aimSensitivity * turretTurnSpeed;
-        float clampedYawRate = Mathf.Clamp(rawYawRate, -maxYawRate, maxYawRate);
-        turretYawOffset += clampedYawRate * Time.deltaTime;
+        float yawRate = clampYawRate ? Mathf.Clamp(rawYawRate, -maxYawRate, maxYawRate) : rawYawRate;
+        turretYawOffset += yawRate * Time.deltaTime;
 
         turretYawOffset = Mathf.Repeat(turretYawOffset + 180f, 360f) - 180f;
 
@@ -89,12 +101,59 @@ public class AimController: MonoBehaviour
 
         Vector3 localYawAxis = GetAxisVector(turretYawAxis);
         Quaternion yawRotation = Quaternion.AngleAxis(turretYawOffset, localYawAxis);
-        Quaternion targetTurretRotation = turretBaseLocalRotation * yawRotation;
+        Quaternion targetTurretRotation = yawInParentSpace
+            ? yawRotation * turretBaseLocalRotation
+            : turretBaseLocalRotation * yawRotation;
+
+        if (stabilizeVisualPivot && hasVisualPivot)
+        {
+            Vector3 pivotAnchorInParent = turretBaseLocalPosition + (turretBaseLocalRotation * visualPivotLocal);
+            turretTransform.localPosition = pivotAnchorInParent - (targetTurretRotation * visualPivotLocal);
+        }
 
         turretTransform.localRotation = targetTurretRotation;
 
         if (!sharedTurretAndCannon)
             cannonTransform.localRotation = cannonBaseLocalRotation;
+    }
+
+    private static bool TryComputeVisualPivotLocal(Transform source, out Vector3 pivotLocal)
+    {
+        Renderer[] renderers = source.GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+        {
+            pivotLocal = Vector3.zero;
+            return false;
+        }
+
+        bool hasBounds = false;
+        Bounds combinedBounds = default;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            if (!hasBounds)
+            {
+                combinedBounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                combinedBounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        if (!hasBounds)
+        {
+            pivotLocal = Vector3.zero;
+            return false;
+        }
+
+        pivotLocal = source.InverseTransformPoint(combinedBounds.center);
+        return true;
     }
 
     public Vector3 GetAimDirection()
