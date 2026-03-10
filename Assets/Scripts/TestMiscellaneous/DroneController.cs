@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 /*Given a series of positions along a path, this component automatically 
 makes the drone move along the path and adjust speed as needed. It also
@@ -8,10 +9,10 @@ animates the drone automatically based on the specified movesQueue in a JSON
 (or hard-coded test case)*/
 public class DroneController : MonoBehaviour
 {
-    [Tooltip("The positions that will be crossed by the drone (assign nodes first to last)")]
-    public Vector3[] pathNodes;
-    private Queue<Move> movesQueue;
+    public string dronePath; // the file containing the specific path this drone will follow
+    public string dronePathDirectory; // directory that contains dronePath file
 
+    private Queue<Move> movesQueue;
     private Vector3 nextPos; // next "checkpoint" to reach
     private int currentNodeIndex = 0;
     private Vector3 move;
@@ -28,11 +29,12 @@ public class DroneController : MonoBehaviour
 
     private struct Move
     {
+        readonly int moveId;
+        readonly Vector3 startPos;
+        readonly Vector3 endPos;
         readonly float startVelocity; // velocity when at this node
         readonly float endVelocity; // velocity by the time of reaching the next node
         readonly string accelerationType; // "linear" or "quadratic"
-        readonly Vector3 startPos;
-        readonly Vector3 endPos;
         Quaternion targetRotation; // the drone should be mostly facing in this direction
         readonly string rotationType; // "linear" or "Slerp"
     }
@@ -40,6 +42,8 @@ public class DroneController : MonoBehaviour
     void Awake()
     {
         defaultRotation = transform.localRotation;
+        LoadDronePath();
+        BuildMovesQueue();
     }
 
     void Update()
@@ -55,10 +59,21 @@ public class DroneController : MonoBehaviour
         }
     }
 
+    private IEnumerator LoadDronePath()
+    /*Extract drone path data from JSON*/
+    {
+        string path = System.IO.Path.Combine(dronePathDirectory, System.String.Concat(dronePath, ".json"));
+
+        UnityWebRequest request = UnityWebRequest.Get(path);
+        yield return null;
+    }
+
     public void BuildMovesQueue()
     /*Use the given pathNodes to compute each move the drone should undergo, then
     put the moves into the movesQueue*/
     {
-        return;
+        // 1) Read values from JSON
+
+        // 2) Fill movesQueue
     }
 }
