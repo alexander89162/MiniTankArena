@@ -11,10 +11,7 @@ public class CrosshairScript : MonoBehaviour
     }
 
     [Header("Crosshair Settings")]
-    [Tooltip("The TargetingSystem for 3rd person aiming")]
-    [SerializeField] private TargetingSystem targetingSystem;
-
-    [Tooltip("Fallback aim source when no TargetingSystem is assigned")]
+    [Tooltip("Aim source for targeting and fallback raycasts")]
     [SerializeField] private AimController aimController;
     
     [Tooltip("The main camera (usually assigned automatically)")]
@@ -35,6 +32,9 @@ public class CrosshairScript : MonoBehaviour
     [Tooltip("Draw debug ray for AimController fallback")]
     [SerializeField] private bool showDebugRay = false;
 
+    [Tooltip("How often to retry finding the active AimController when missing")]
+    [SerializeField] private float aimResolveInterval = 0.5f;
+
     [Tooltip("Layer mask for center-screen target classification")]
     [SerializeField] private LayerMask detectionLayerMask = -1;
 
@@ -44,6 +44,9 @@ public class CrosshairScript : MonoBehaviour
     [Header("Visual Settings")]
     [Tooltip("Crosshair color")]
     [SerializeField] private Color crosshairColor = Color.white;
+
+    [Tooltip("Optional custom sprite for the crosshair image")]
+    [SerializeField] private Sprite crosshairSprite;
 
     [Tooltip("Inner ring color when aiming at enemy")]
     [SerializeField] private Color enemyInnerRingColor = new Color(1f, 0.18f, 0.18f, 1f);
@@ -58,6 +61,7 @@ public class CrosshairScript : MonoBehaviour
     private Image crosshairImage;
     private Image innerRingImage;
     private Canvas canvas;
+    private float nextAimResolveTime;
 
     private static Sprite cachedInnerRingSprite;
     
@@ -85,32 +89,24 @@ public class CrosshairScript : MonoBehaviour
         // Get main camera if not assigned
         if (mainCamera == null)
         {
-            mainCamera = Camera.main;
+            mainCamera = ResolveGameplayCamera();
         }
         
-        // Auto-find TargetingSystem if not assigned
-        if (targetingSystem == null)
-        {
-            targetingSystem = FindFirstObjectByType<TargetingSystem>();
-            if (targetingSystem != null)
-            {
-                Debug.Log("CrosshairScript: Auto-found TargetingSystem");
-            }
-            else
-            {
-                Debug.LogWarning("CrosshairScript: No TargetingSystem found in scene. Add one to your player tank.");
-            }
-        }
-
         // Auto-find AimController fallback if not assigned
         if (aimController == null)
         {
-            aimController = FindFirstObjectByType<AimController>();
+            aimController = ResolvePreferredAimController();
         }
+
+        if (aimController == null)
+            Debug.LogWarning("CrosshairScript: No AimController found in scene. Add one to your player tank.");
         
         // Apply visual settings
         if (crosshairImage != null)
         {
+            if (crosshairSprite != null)
+                crosshairImage.sprite = crosshairSprite;
+
             crosshairImage.color = crosshairColor;
         }
 
@@ -127,10 +123,97 @@ public class CrosshairScript : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
     }
 
+    AimController ResolvePreferredAimController()
+    {
+        GameObject preferredGreenTank = FindPreferredGreenTankObject();
+        if (preferredGreenTank != null)
+        {
+            AimController preferredAim = preferredGreenTank.GetComponentInChildren<AimController>(true);
+            if (preferredAim != null)
+                return preferredAim;
+        }
+
+        AimController localAim = GetComponentInParent<AimController>();
+        if (localAim != null)
+            return localAim;
+
+        GameObject taggedPlayer = TryFindTaggedObject("Player");
+        if (taggedPlayer != null)
+        {
+            AimController playerAim = taggedPlayer.GetComponentInChildren<AimController>(true);
+            if (playerAim != null)
+                return playerAim;
+        }
+
+        return FindFirstObjectByType<AimController>();
+    }
+
+    static GameObject FindPreferredGreenTankObject()
+    {
+        GameObject preferred = GameObject.Find("minitank-v10-green 1");
+        if (preferred != null)
+            return preferred;
+
+        return GameObject.Find("minitank-v10-green");
+    }
+
+    static GameObject TryFindTaggedObject(string tag)
+    {
+        try
+        {
+            return GameObject.FindGameObjectWithTag(tag);
+        }
+        catch (UnityException)
+        {
+            return null;
+        }
+    }
+
+    static Camera ResolveGameplayCamera()
+    {
+        Camera taggedMain = Camera.main;
+        if (IsGameplayCamera(taggedMain))
+            return taggedMain;
+
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera candidate = cameras[i];
+            if (candidate == null)
+                continue;
+
+            if (candidate.name.Contains("PlayerCamera"))
+                return candidate;
+        }
+
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Camera candidate = cameras[i];
+            if (IsGameplayCamera(candidate))
+                return candidate;
+        }
+
+        return taggedMain;
+    }
+
+    static bool IsGameplayCamera(Camera camera)
+    {
+        if (camera == null || !camera.isActiveAndEnabled)
+            return false;
+
+        string cameraName = camera.name.ToLowerInvariant();
+        if (cameraName.Contains("minimap"))
+            return false;
+
+        return true;
+    }
+
     void Update()
     {
         if (rectTransform == null || mainCamera == null)
             return;
+
+        EnsureAimControllerReference();
         
         if (lockToCenter)
         {
@@ -156,16 +239,22 @@ public class CrosshairScript : MonoBehaviour
     {
         Vector3 targetPosition;
 
-        if (targetingSystem != null && targetingSystem.HasValidTarget())
+        if (aimController != null && aimController.HasValidTarget())
         {
-            targetPosition = targetingSystem.GetTargetPosition();
+            targetPosition = aimController.GetTargetPosition();
         }
         else if (aimController != null)
         {
             Vector3 aimDirection = aimController.GetAimDirection().normalized;
-            Vector3 rayOrigin = aimController.transform.position + aimDirection * muzzleForwardOffset;
+            Transform raySource = aimController.GetCannonTransform();
+            if (raySource == null)
+                raySource = aimController.GetTurretTransform();
 
-            if (Physics.Raycast(rayOrigin, aimDirection, out RaycastHit hit, maxAimDistance, aimLayerMask))
+            Vector3 rayOrigin = (raySource != null ? raySource.position : aimController.transform.position) + aimDirection * muzzleForwardOffset;
+
+            bool hitFound = TryRaycastIgnoringAimControllerSelf(rayOrigin, aimDirection, maxAimDistance, aimLayerMask, out RaycastHit hit);
+
+            if (hitFound)
             {
                 targetPosition = hit.point;
             }
@@ -205,6 +294,48 @@ public class CrosshairScript : MonoBehaviour
             // Point is behind camera, keep at center
             CenterCrosshair();
         }
+    }
+
+    void EnsureAimControllerReference()
+    {
+        if (aimController != null && aimController.isActiveAndEnabled && aimController.gameObject.activeInHierarchy)
+            return;
+
+        if (Time.unscaledTime < nextAimResolveTime)
+            return;
+
+        aimController = ResolvePreferredAimController();
+        nextAimResolveTime = Time.unscaledTime + Mathf.Max(0.1f, aimResolveInterval);
+    }
+
+    bool TryRaycastIgnoringAimControllerSelf(Vector3 origin, Vector3 direction, float distance, int mask, out RaycastHit hit)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction, distance, mask, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+        {
+            hit = default;
+            return false;
+        }
+
+        System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+        Transform selfRoot = aimController != null ? aimController.transform.root : null;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider candidateCollider = hits[i].collider;
+            if (candidateCollider == null)
+                continue;
+
+            Transform candidate = candidateCollider.transform;
+            if (selfRoot != null && candidate != null && candidate.IsChildOf(selfRoot))
+                continue;
+
+            hit = hits[i];
+            return true;
+        }
+
+        hit = default;
+        return false;
     }
     
     void OnDestroy()
@@ -275,7 +406,7 @@ public class CrosshairScript : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, detectionDistance, detectionLayerMask))
             return CrosshairTargetState.Default;
 
-        if (HasTagInHierarchy(hit.transform, "Enemy") || HasTagInHierarchy(hit.transform, "enemy"))
+        if (HasTagInHierarchy(hit.transform, "Enemy"))
             return CrosshairTargetState.Enemy;
 
         return CrosshairTargetState.Obstacle;
@@ -366,5 +497,12 @@ public class CrosshairScript : MonoBehaviour
         {
             rectTransform.localScale = Vector3.one * size;
         }
+    }
+
+    public void SetCrosshairSprite(Sprite sprite)
+    {
+        crosshairSprite = sprite;
+        if (crosshairImage != null && sprite != null)
+            crosshairImage.sprite = sprite;
     }
 }
