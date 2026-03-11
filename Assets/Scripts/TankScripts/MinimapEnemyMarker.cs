@@ -7,7 +7,6 @@ public class MinimapEnemyMarker : MonoBehaviour
     [SerializeField] private MinimapRadarOverlay radarOverlay;
     [SerializeField] private float edgePadding = 18f;
     [SerializeField] private float yawOffset = 0f;
-    [SerializeField] private bool hideWhenOutOfRange = false;
 
     private RectTransform markerRect;
 
@@ -33,7 +32,7 @@ public class MinimapEnemyMarker : MonoBehaviour
             return;
         }
 
-        if (!isInRange && hideWhenOutOfRange)
+        if (!isInRange)
         {
             markerRect.gameObject.SetActive(false);
             return;

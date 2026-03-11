@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System;
-using System.Collections.Generic;
 
 public class HUDController : MonoBehaviour
 {
@@ -21,7 +19,7 @@ public class HUDController : MonoBehaviour
 
     private bool minimapMarkerCleaned;
     private MinimapPlayerMarker minimapPlayerMarker;
-    private readonly List<MinimapEnemyMarker> minimapEnemyMarkers = new List<MinimapEnemyMarker>();
+    private MinimapEnemyMarker minimapEnemyMarker;
 
     [Header("Layout")]
     [SerializeField] private bool bulletCountOnRight = true;
@@ -53,7 +51,7 @@ public class HUDController : MonoBehaviour
     private float nextTargetResolveTime;
     private float nextEnemyResolveTime;
     private Transform cachedMinimapTarget;
-    private readonly List<Transform> cachedEnemyTargets = new List<Transform>();
+    private Transform cachedEnemyTarget;
 
     void Awake()
     {
@@ -264,16 +262,6 @@ public class HUDController : MonoBehaviour
 
         nextTargetResolveTime = Time.unscaledTime + targetResolveInterval;
 
-        GameObject preferredTank = GameObject.Find("minitank-v10-green 1");
-        if (preferredTank == null)
-            preferredTank = GameObject.Find("minitank-v10-green");
-
-        if (preferredTank != null)
-        {
-            cachedMinimapTarget = preferredTank.transform;
-            return cachedMinimapTarget;
-        }
-
         GameObject taggedPlayer = TryFindTaggedPlayer();
         if (taggedPlayer != null)
         {
@@ -429,94 +417,49 @@ public class HUDController : MonoBehaviour
         if (playerTarget == null)
             return;
 
-        List<Transform> enemyTargets = ResolveEnemyTargetTransforms(playerTarget);
+        Transform enemyTarget = ResolveEnemyTargetTransform(playerTarget);
 
-        if (enemyTargets.Count == 0)
+        if (enemyTarget == null)
         {
-            for (int i = 0; i < minimapEnemyMarkers.Count; i++)
-            {
-                MinimapEnemyMarker marker = minimapEnemyMarkers[i];
-                if (marker != null)
-                    marker.gameObject.SetActive(false);
-            }
+            if (minimapEnemyMarker != null)
+                minimapEnemyMarker.gameObject.SetActive(false);
             return;
         }
 
-        EnsureEnemyMarkerPool(minimapRoot, enemyTargets.Count);
+        if (minimapEnemyMarker == null)
+            minimapEnemyMarker = GetOrCreateEnemyMarker(minimapRoot);
 
-        for (int i = 0; i < minimapEnemyMarkers.Count; i++)
-        {
-            MinimapEnemyMarker marker = minimapEnemyMarkers[i];
-            if (marker == null)
-                continue;
+        if (minimapEnemyMarker == null)
+            return;
 
-            if (i < enemyTargets.Count)
-            {
-                marker.SetTarget(enemyTargets[i]);
-                marker.SetPlayerReference(playerTarget);
-                marker.SetRadarOverlay(minimapRadarOverlay);
-                marker.gameObject.SetActive(true);
-                ApplyEnemyMarkerStyle(marker);
-                marker.transform.SetAsLastSibling();
-            }
-            else
-            {
-                marker.gameObject.SetActive(false);
-            }
-        }
+        minimapEnemyMarker.SetTarget(enemyTarget);
+        minimapEnemyMarker.SetPlayerReference(playerTarget);
+        minimapEnemyMarker.SetRadarOverlay(minimapRadarOverlay);
+        minimapEnemyMarker.gameObject.SetActive(true);
+
+        ApplyEnemyMarkerStyle(minimapEnemyMarker);
+        minimapEnemyMarker.transform.SetAsLastSibling();
 
         if (minimapPlayerMarker != null)
             minimapPlayerMarker.transform.SetAsLastSibling();
     }
 
-    void EnsureEnemyMarkerPool(RectTransform minimapRoot, int requiredCount)
+    Transform ResolveEnemyTargetTransform(Transform playerTarget)
     {
-        for (int i = minimapEnemyMarkers.Count - 1; i >= 0; i--)
+        GameObject taggedEnemy = TryFindTaggedEnemy();
+        if (taggedEnemy != null)
         {
-            if (minimapEnemyMarkers[i] == null)
-                minimapEnemyMarkers.RemoveAt(i);
+            cachedEnemyTarget = taggedEnemy.transform;
+            return cachedEnemyTarget;
         }
 
-        MinimapEnemyMarker[] existingMarkers = minimapRoot.GetComponentsInChildren<MinimapEnemyMarker>(true);
-        for (int i = 0; i < existingMarkers.Length; i++)
-        {
-            MinimapEnemyMarker existingMarker = existingMarkers[i];
-            if (existingMarker != null && !minimapEnemyMarkers.Contains(existingMarker))
-                minimapEnemyMarkers.Add(existingMarker);
-        }
+        if (cachedEnemyTarget != null && cachedEnemyTarget.gameObject.activeInHierarchy && cachedEnemyTarget != playerTarget)
+            return cachedEnemyTarget;
 
-        while (minimapEnemyMarkers.Count < requiredCount)
-        {
-            MinimapEnemyMarker marker = CreateEnemyMarker(minimapRoot, minimapEnemyMarkers.Count + 1);
-            if (marker == null)
-                break;
-
-            minimapEnemyMarkers.Add(marker);
-        }
-
-        minimapEnemyMarkers.Sort((left, right) =>
-        {
-            if (left == null && right == null)
-                return 0;
-            if (left == null)
-                return 1;
-            if (right == null)
-                return -1;
-            return left.transform.GetSiblingIndex().CompareTo(right.transform.GetSiblingIndex());
-        });
-    }
-
-    List<Transform> ResolveEnemyTargetTransforms(Transform playerTarget)
-    {
         if (Time.unscaledTime < nextEnemyResolveTime)
-            return cachedEnemyTargets;
+            return cachedEnemyTarget;
 
         nextEnemyResolveTime = Time.unscaledTime + 0.75f;
-        cachedEnemyTargets.Clear();
-
-        HashSet<int> seenIds = new HashSet<int>();
-
-        TryFindTaggedEnemies(cachedEnemyTargets, seenIds, "Enemy", playerTarget);
 
         TankController[] tanks = FindObjectsByType<TankController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         for (int i = 0; i < tanks.Length; i++)
@@ -526,51 +469,38 @@ public class HUDController : MonoBehaviour
                 continue;
 
             Transform candidateTransform = candidate.transform;
-            if (candidateTransform == null || candidateTransform == playerTarget)
+            if (candidateTransform == playerTarget)
                 continue;
 
-            GameObject candidateObject = candidateTransform.gameObject;
-            if (HasTagSafe(candidateObject, "Player") || HasTagSafe(candidateObject, "player"))
+            if (HasTagSafe(candidateTransform.gameObject, "Player") || HasTagSafe(candidateTransform.gameObject, "player"))
                 continue;
 
-            int instanceId = candidateObject.GetInstanceID();
-            if (!seenIds.Add(instanceId))
-                continue;
+            if (candidateTransform.name.Contains("minitank-processed-v3"))
+            {
+                cachedEnemyTarget = candidateTransform;
+                return cachedEnemyTarget;
+            }
 
-            cachedEnemyTargets.Add(candidateTransform);
+            if (cachedEnemyTarget == null)
+                cachedEnemyTarget = candidateTransform;
         }
 
-        return cachedEnemyTargets;
+        return cachedEnemyTarget;
     }
 
-    void TryFindTaggedEnemies(List<Transform> targets, HashSet<int> seenIds, string tag, Transform playerTarget)
+    static GameObject TryFindTaggedEnemy()
     {
-        GameObject[] taggedEnemies = Array.Empty<GameObject>();
+        GameObject taggedEnemy = null;
 
         try
         {
-            taggedEnemies = GameObject.FindGameObjectsWithTag(tag);
+            taggedEnemy = GameObject.FindGameObjectWithTag("Enemy");
         }
         catch (UnityException)
         {
         }
 
-        for (int i = 0; i < taggedEnemies.Length; i++)
-        {
-            GameObject taggedEnemy = taggedEnemies[i];
-            if (taggedEnemy == null)
-                continue;
-
-            Transform enemyTransform = taggedEnemy.transform;
-            if (enemyTransform == null || enemyTransform == playerTarget)
-                continue;
-
-            int instanceId = taggedEnemy.GetInstanceID();
-            if (!seenIds.Add(instanceId))
-                continue;
-
-            targets.Add(enemyTransform);
-        }
+        return taggedEnemy;
     }
 
     static bool HasTagSafe(GameObject gameObject, string tag)
@@ -588,9 +518,17 @@ public class HUDController : MonoBehaviour
         }
     }
 
-    MinimapEnemyMarker CreateEnemyMarker(RectTransform minimapRoot, int markerIndex)
+    MinimapEnemyMarker GetOrCreateEnemyMarker(RectTransform minimapRoot)
     {
-        GameObject markerObject = new GameObject($"EnemyMarker_{markerIndex}", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(MinimapEnemyMarker));
+        MinimapEnemyMarker existing = minimapRoot.GetComponentInChildren<MinimapEnemyMarker>(true);
+        if (existing != null)
+        {
+            if (existing.GetComponent<TextMeshProUGUI>() == null)
+                existing.gameObject.AddComponent<TextMeshProUGUI>();
+            return existing;
+        }
+
+        GameObject markerObject = new GameObject("EnemyMarker", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(MinimapEnemyMarker));
         markerObject.transform.SetParent(minimapRoot, false);
 
         RectTransform markerRect = markerObject.GetComponent<RectTransform>();

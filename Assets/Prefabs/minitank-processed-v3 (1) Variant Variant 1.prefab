@@ -53,11 +53,9 @@ MonoBehaviour:
   cannonElevationSpeed: 45
   maxElevation: 40
   minElevation: -8
+  rotationSpace: 0
   turretTransform: {fileID: 8727639666931727599}
-  cannonTransform: {fileID: 8727639666931727599}
-  turretYawAxis: 2
-  cannonPitchAxis: 0
-  invertCannonPitch: 0
+  cannonTransform: {fileID: 8278659571248846200}
 --- !u!1 &518899089200585732
 GameObject:
   m_ObjectHideFlags: 0
@@ -392,6 +390,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d47d067757c1d34880247d113502b67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TankController
+  tankSlope: {fileID: 0}
   turrets:
   - {fileID: 8894601857415178106}
   - {fileID: 9004511785883292862}
@@ -449,10 +448,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookAction: {fileID: 2948036706600790992, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   followTarget: {fileID: 7967342445530209420}
-  offset: {x: 2.2, y: 2.2, z: -8.2}
-  rotationSpeed: 90
-  minPitch: -8
-  maxPitch: 35
+  offset: {x: 0, y: 15, z: 0}
+  rotationSpeed: 45
+  minPitch: 75
+  maxPitch: 115
 --- !u!1 &4936218030216310615
 GameObject:
   m_ObjectHideFlags: 0
@@ -646,7 +645,6 @@ GameObject:
   - component: {fileID: 8025087934086537915}
   - component: {fileID: 8286809041115569697}
   - component: {fileID: 8701189281265542549}
-  - component: {fileID: 2302825603500856102}
   m_Layer: 0
   m_Name: PlayerCamera
   m_TagString: Untagged
@@ -772,20 +770,6 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!114 &2302825603500856102
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5873911113907892783}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 222d684cfb58012489bbf10ed86f6afb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerCamera
-  target: {fileID: 0}
-  offset: {x: 0, y: 0, z: 0}
 --- !u!1 &6856291866569941676
 GameObject:
   m_ObjectHideFlags: 0
