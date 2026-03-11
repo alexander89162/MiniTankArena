@@ -426,6 +426,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: HitSpark
       objectReference: {fileID: 0}
+    - target: {fileID: 58065459810175130, guid: 23919cf0ec1b4a24aa999d5f8835230b, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6003270111212095823, guid: 23919cf0ec1b4a24aa999d5f8835230b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 80.1
