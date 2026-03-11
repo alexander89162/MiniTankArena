@@ -1537,23 +1537,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: maxPitch
-      value: 125
+      value: 35
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: minPitch
-      value: 75
+      value: -8
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: offset.y
-      value: 12.5
+      value: 2.2
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: offset.z
-      value: -2.75
+      value: -8.2
       objectReference: {fileID: 0}
     - target: {fileID: 5915421714139233328, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: rotationSpeed
-      value: 50
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: 6856291866569941676, guid: 92dc34852e4488f46a3169e0e87ac4ef, type: 3}
       propertyPath: m_Layer
