@@ -7,6 +7,10 @@ public class SimpleProjectile : MonoBehaviour
     public float maxLifetime = 8f;
     public Vector3 initialVelocity = Vector3.zero;
 
+
+    [SerializeField] private float damage = 35f;
+    [SerializeField] private GameObject hitEffectPrefab;
+
     [Header("Hit Detection")]
     public LayerMask hitLayers;             // only enemies / world — **exclude** your own tank layer!
     public float raycastLengthMultiplier = 1.2f;   // safety margin
@@ -62,8 +66,18 @@ public class SimpleProjectile : MonoBehaviour
 
     private void OnHit(Vector3 point, Vector3 normal, Collider target)
     {
-        // Apply damage, spawn particles, etc.
-        Debug.Log($"Hit: {target.name} at distance {Vector3.Distance(spawnPosition, point):F1}m");
+        Debug.Log($"[Projectile] Hit {target.name} for {damage} damage!");
+
+        // **DAMAGE INTEGRATION** — Apply to DamageReceiver
+        if (target.TryGetComponent<DamageController>(out DamageController receiver))
+        {
+            receiver.TakeDamage(damage);
+        }
+
+        if (hitEffectPrefab != null)
+        {
+            Instantiate(hitEffectPrefab, point, Quaternion.LookRotation(normal));
+        }
 
         Destroy(gameObject);
     }
@@ -77,7 +91,7 @@ public class SimpleProjectile : MonoBehaviour
             if (distFromSpawn >= initialIgnoreDistance)
             {
                 OnHit(transform.position, -transform.forward, other);
-                Destroy(gameObject);
+                //Destroy(gameObject);
             }
         }
     }
