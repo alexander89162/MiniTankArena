@@ -1,24 +1,21 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.UIElements;
 
-/*Given a series of Move instructions, this component makes the drone move along 
-the path and interpolate values as needed to animate the drone automatically*/
+/*Given a series of Move instructions, this component automatically moves 
+and animates the drone*/
 public class DroneController : MonoBehaviour
 {
     public string droneActions; // the file containing the specific actions this drone will follow
     public string droneActionsPath; // directory that contains droneActions file
-
     private List<Move> moves;
     private List<BrakingManeuver> brakingManeuvers;
     private List<DeploymentAction> deploymentActions;
     private int currentNodeIndex = 0;
-    AnimationState currentState = AnimationState.Forward;
+    ControllerState currentState = ControllerState.Forward;
 
-    private enum AnimationState
+    private enum ControllerState
     {
         InitializingController, // not ready to move or animate yet
         Forward, // leans the drone forward and tilts based on next path node
@@ -28,7 +25,7 @@ public class DroneController : MonoBehaviour
 
     public class DroneActions
     {
-        public readonly Move[] moves;
+        public readonly MoveJson[] moves;
         public readonly BrakingManeuver[] brakingManeuvers;
         public readonly DeploymentAction[] deploymentActions;
     }
@@ -39,8 +36,34 @@ public class DroneController : MonoBehaviour
         public readonly Vector3 position;
         public readonly Quaternion rotation;
         public readonly float endVelocity;
-        public readonly string accelerationType; // "linear" or "quadratic"
-        public readonly string rotationType; // "linear" or "Slerp"
+        public readonly AccelerationType accelerationType; // "linear" or "quadratic"
+        public readonly RotationType rotationType; // "linear" or "Slerp"
+        public Move(MoveJson json)
+        {
+            moveId = json.moveId;
+            position = json.position;
+            rotation = Quaternion.Euler(json.rotation);
+            endVelocity = json.endVelocity;
+
+            accelerationType =
+                System.Enum.TryParse(json.accelerationType, true, out AccelerationType a)
+                ? a : AccelerationType.Unknown;
+
+            rotationType =
+                System.Enum.TryParse(json.rotationType, true, out RotationType r)
+                ? r : RotationType.Unknown;
+        }
+    }
+
+    [System.Serializable]
+    public struct MoveJson
+    {
+        public int moveId;
+        public Vector3 position;
+        public Vector3 rotation;
+        public float endVelocity;
+        public string accelerationType;
+        public string rotationType;
     }
 
     public readonly struct BrakingManeuver
@@ -58,13 +81,26 @@ public class DroneController : MonoBehaviour
         public readonly float duration;
     }
 
+    public enum AccelerationType
+    {
+        Unknown,
+        Linear,
+        Quadratic
+    }
+
+    public enum RotationType
+    {
+        Unknown,
+        Linear,
+        Slerp
+    }
+
     // Allowed interpolation methods
-    private static readonly HashSet<string> allowedAccelerationTypes = new HashSet<string>{ "linear", "quadratic" };
     private static readonly HashSet<string> allowedRotationTypes = new HashSet<string>{ "linear", "slerp" };
 
     void Awake()
     {
-        SetState(AnimationState.InitializingController);
+        SetState(ControllerState.InitializingController);
         StartCoroutine(InitializeDroneActions());
     }
 
@@ -72,11 +108,13 @@ public class DroneController : MonoBehaviour
     {
         switch (currentState)
         {
-            case AnimationState.Forward:
+            case ControllerState.InitializingController: break;
+            case ControllerState.Forward:
+                //
                 break;
-            case AnimationState.StabilizingFromStop:
+            case ControllerState.StabilizingFromStop:
                 break;
-            case AnimationState.Idle:
+            case ControllerState.Idle:
                 break;
         }
     }
@@ -93,6 +131,7 @@ public class DroneController : MonoBehaviour
         if (request.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError("Failed to load drone actions: " + request.error);
+            Destroy(gameObject);
             yield break;
         }
 
@@ -102,7 +141,7 @@ public class DroneController : MonoBehaviour
             );
 
         // 2) Validation - fail = delete this drone to avoid crashes
-        if (!ValidateDroneActions(actions))
+        if (!ValidateDroneActions())
         {
             Debug.LogError($"DroneController on {name} received invalid action data. Destroying drone.");
             Destroy(gameObject);
@@ -110,28 +149,30 @@ public class DroneController : MonoBehaviour
         }
 
         // 3) Cache the data we need
-        moves = new List<Move>(actions.moves);
+        moves = new List<Move>(actions.moves.Length);
+        foreach (var m in actions.moves)
+            moves.Add(new Move(m));
         brakingManeuvers = new List<BrakingManeuver>(actions.brakingManeuvers);
         deploymentActions = new List<DeploymentAction>(actions.deploymentActions);
 
         // 4) Done initializing
-        SetState(AnimationState.Forward);
+        SetState(ControllerState.Forward);
     }
 
-    private bool ValidateDroneActions(DroneActions actions)
+    private bool ValidateDroneActions()
     {
         // 1) Interpolation methods must be valid
         for (int i = 0; i < moves.Count; i++)
         {
             var move = moves[i];
-            if (string.IsNullOrEmpty(move.accelerationType) || !allowedAccelerationTypes.Contains(move.accelerationType.ToLower()))
+            if (!System.Enum.IsDefined(typeof(AccelerationType), move.accelerationType) || move.accelerationType == AccelerationType.Unknown)
             {
-                Debug.LogError($"Acceleration type is invalid or missing");
+                Debug.LogError($"Acceleration type is invalid.");
                 return false;   
             }
-            if (string.IsNullOrEmpty(move.rotationType) || !allowedRotationTypes.Contains(move.rotationType.ToLower()))
+            if (!System.Enum.IsDefined(typeof(RotationType), move.rotationType) || move.rotationType == RotationType.Unknown)
             {
-                Debug.LogError($"Rotation type is invalid or missing");
+                Debug.LogError($"Rotation type is invalid.");
                 return false;   
             }
         }
@@ -139,5 +180,15 @@ public class DroneController : MonoBehaviour
         return true;
     }
 
-    private void SetState(AnimationState newState){ currentState = newState; }
+    private float ApplyAcceleration(float t, AccelerationType type)
+    {
+        switch (type)
+        {
+            case AccelerationType.Linear: return t;
+            case AccelerationType.Quadratic: return t * t;
+            default: return t;
+        }
+    }
+
+    private void SetState(ControllerState newState){ currentState = newState; }
 }
