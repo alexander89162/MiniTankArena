@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour
 {
+    //grabing updated to push to main
     //Sets up look action and transform object to grab
     [SerializeField] InputActionReference lookAction;     
     [SerializeField] Transform followTarget;             
