@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class AimController: MonoBehaviour
+public class AimControllertest: MonoBehaviour
 {
     private enum Axis
     {
