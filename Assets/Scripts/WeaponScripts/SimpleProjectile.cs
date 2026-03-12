@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class SimpleProjectile : MonoBehaviour
@@ -12,21 +13,19 @@ public class SimpleProjectile : MonoBehaviour
     [SerializeField] private GameObject hitEffectPrefab;
 
     [Header("Hit Detection")]
-    public LayerMask hitLayers;             // only enemies / world — **exclude** your own tank layer!
-    public float raycastLengthMultiplier = 1.2f;   // safety margin
-    public float initialIgnoreDistance = 1.5f;     // NEW: ignore hits within X meters of spawn
+    public LayerMask hitLayers;        
+    public float raycastLengthMultiplier = 1.2f;   
+    public float initialIgnoreDistance = 1.5f;   
 
-    //private Vector3 velocityDirection;
+
     private Vector3 velocity;
-    private Vector3 spawnPosition;                 // NEW
+    private Vector3 spawnPosition;             
     private float spawnTime;
 
     void Start()
     {
         spawnTime = Time.time;
-        spawnPosition = transform.position;        // remember exact spawn point
-        //velocityDirection = transform.forward.normalized;
-        //velocity = velocity.normalized * (speed + initialVelocity.magnitude * 0.8f);
+        spawnPosition = transform.position; 
         velocity = initialVelocity + transform.forward * speed;
     }
 
@@ -47,7 +46,7 @@ public class SimpleProjectile : MonoBehaviour
 
         if (Physics.Raycast(ray, out RaycastHit hit, rayDistanceThisFrame, hitLayers))
         {
-            // NEW: ignore very close hits (self / muzzle / gun barrel)
+            //ignore self / muzzle / gun barrel
             float distanceFromSpawn = Vector3.Distance(hit.point, spawnPosition);
             if (distanceFromSpawn >= initialIgnoreDistance)
             {
@@ -68,7 +67,6 @@ public class SimpleProjectile : MonoBehaviour
     {
         Debug.Log($"[Projectile] Hit {target.name} for {damage} damage!");
 
-        // **DAMAGE INTEGRATION** — Apply to DamageReceiver
         if (target.TryGetComponent<DamageController>(out DamageController receiver))
         {
             receiver.TakeDamage(damage);
@@ -79,7 +77,8 @@ public class SimpleProjectile : MonoBehaviour
             Instantiate(hitEffectPrefab, point, Quaternion.LookRotation(normal));
         }
 
-        Destroy(gameObject);
+        Destroy(Instantiate(hitEffectPrefab, point, Quaternion.LookRotation(normal)), .15f); // Destroy effect after 2 seconds
+        //hitEffectPrefab.IsDestroyed();
     }
 
     // Optional: keep OnTriggerEnter as fallback / for trigger colliders
@@ -91,7 +90,7 @@ public class SimpleProjectile : MonoBehaviour
             if (distFromSpawn >= initialIgnoreDistance)
             {
                 OnHit(transform.position, -transform.forward, other);
-                //Destroy(gameObject);
+                Destroy(gameObject);
             }
         }
     }
