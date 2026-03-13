@@ -10,6 +10,7 @@ public class UnitManager : MonoBehaviour
 {
     public enum WaveState
     {
+        InitializingUnitManager, // don't do anything in Update() yet, we are still loading configs (avoid crashes)
         Allocating, // Fills unitHandles with instantiated units (disabled until WaveRunning)
         BuildingQueue, // Fills SpawnQueue by first-to-last spawnDelay
         WaveReady, // We allocated and filled queue, now just wait for minimum wait time between waves so waves never start too quickly
@@ -69,11 +70,13 @@ public class UnitManager : MonoBehaviour
         public UnitConfig[] unitConfigs;
     }
 
-    public event Action OnVictory;
+    public event Action OnVictory; // when we win
+    public event Action OnBattleExit; // when the player leaves, or edge case breaks the waves
     public bool debug = false;
 
     void Awake()
     {
+        SetState(WaveState.InitializingUnitManager);
         unitHandles = new List<UnitData>();
         prefabLookup = prefabList.ToDictionary(p => p.name, p => p);
         spawnQueue = new Queue<UnitData>();
@@ -88,6 +91,7 @@ public class UnitManager : MonoBehaviour
     {
         switch (currentState)
         {
+            case WaveState.InitializingUnitManager: break;
             case WaveState.WaveRunning:
                 UpdateWave(); // Uses queue to gradually spawn everything, then waits for all enemies (or player) to die to end wave
                 break;
@@ -147,7 +151,7 @@ public class UnitManager : MonoBehaviour
     valid units to spawn in the current frame*/
     {
         waveTimer += Time.deltaTime;
-        while (spawnQueue.Count > 0 && spawnQueue.Peek().config.spawnDelay < waveTimer)
+        while (spawnQueue.Count > 0 && spawnQueue.Peek().config.spawnDelay <= waveTimer)
         {
             SpawnUnit(); // unit is popped in SpawnUnit()
         }
@@ -243,6 +247,7 @@ public class UnitManager : MonoBehaviour
         {
             currentWave = "wave1";
         }
+        SetState(WaveState.Allocating);
     }
 
     public void FillUnitHandles(WaveDefinition wave)
@@ -276,7 +281,7 @@ public class UnitManager : MonoBehaviour
             if (!prefabLookup.TryGetValue(config.prefabName, out GameObject unitPrefab))
             {
                 Debug.LogError("The prefab \"" + config.prefabName + "\" was skipped because it was not found.");
-                continue;
+                unitHandles.RemoveAt(i); i--; continue;
             }
             GameObject unit = Instantiate(unitPrefab);
             unitHandles[i].gameObject = unit;
@@ -326,43 +331,63 @@ public class UnitManager : MonoBehaviour
 
         unitHandles.Clear();
 
-        // try to find the next wave. If it does not exist, we can terminate 
-        // this UnitManager instance and send message to UI about Victory
-        currentWave = FindNextWave(currentWave);
-        if (currentWave != null)
+        // try to find the next wave. If it does not exist, we can terminate this
+        // UnitManager instance and send message to UI about Victory
+        string next;
+        int result = FindNextWave(currentWave, out next);
+
+        if (result == 0)
         {
+            currentWave = next;
             SetState(WaveState.Allocating);
+        }
+        else if (result == 1)
+        {
+            OnVictory?.Invoke();
+            Destroy(this);
         }
         else
         {
-            OnVictory?.Invoke(); // send UI a message indicating the player won
-            Destroy(this); // terminate this UnitManager instance
+            OnBattleExit?.Invoke();
+            Destroy(this);
         }
-        
+        busy = false;
     }
 
-    public string FindNextWave(string previous)
+    public int FindNextWave(string previous, out string nextWave)
     {
         if (debug) Debug.Log("FindNextWave() invoked on " + currentWave);
+
+        nextWave = null;
 
         switch (waveMode.ToLower())
         {
             case "sequential":
-                if (!int.TryParse(previous.Substring(4), out int lastWaveNum))
+                if (!previous.StartsWith("wave") || !int.TryParse(previous.Substring(4), out int lastWaveNum))
                 {
                     Debug.LogError("Invalid wave name: " + previous);
-                    return null;
+                    OnBattleExit?.Invoke(); Destroy(this); return -1;
                 }
-                return "wave" + (lastWaveNum + 1);
-            case "procedural":
+
+                nextWave = "wave" + (lastWaveNum + 1);
+                string path = System.IO.Path.Combine(
+                    waveContentsPath,
+                    nextWave + ".json"
+                );
+                return System.IO.File.Exists(path) ? 0 : 1;
+                
+            case "procedural": // endless mode
                 if (debug) Debug.Log("Previous wave: " + (previous ?? "NULL"));
                 if (waveTransitions != null && waveTransitions.TryGetValue(previous, out string next))
-                    return next;
+                {
+                    nextWave = next;
+                    return 0;
+                }
                 Debug.LogWarning("Error: No procedural transition was found for " + currentWave);
-                return null;
+                return -1;
             default:
                 Debug.Log("Error: Spawn method was not specified");
-                return null;
+                return -1;
         }
     }
     
