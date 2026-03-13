@@ -8,12 +8,14 @@ and animates the drone*/
 public class DroneController : MonoBehaviour
 {
     public string droneActions; // the file containing the specific actions this drone will follow
-    public string droneActionsPath; // directory that contains droneActions file
     private List<Move> moves;
     private List<BrakingManeuver> brakingManeuvers;
     private List<DeploymentAction> deploymentActions;
-    private int currentNodeIndex = 0;
+    private int currentNodeIndex = 1;
     ControllerState currentState = ControllerState.Forward;
+    private float elapsedTime = 0f;
+    private float segmentDuration = 3f;
+    private float segmentTimer = 0f;
 
     private enum ControllerState
     {
@@ -25,19 +27,19 @@ public class DroneController : MonoBehaviour
 
     public class DroneActions
     {
-        public readonly MoveJson[] moves;
-        public readonly BrakingManeuver[] brakingManeuvers;
-        public readonly DeploymentAction[] deploymentActions;
+        public MoveJson[] movements;
+        public BrakingManeuver[] brakingManeuvers;
+        public DeploymentAction[] deploymentActions;
     }
 
     public struct Move
     {
-        public readonly int moveId;
-        public readonly Vector3 position;
-        public readonly Quaternion rotation;
-        public readonly float endVelocity;
-        public readonly AccelerationType accelerationType; // "linear" or "quadratic"
-        public readonly RotationType rotationType; // "linear" or "Slerp"
+        public int moveId;
+        public Vector3 position;
+        public Quaternion rotation;
+        public float endVelocity;
+        public AccelerationType accelerationType; // "linear" or "quadratic"
+        public RotationType rotationType; // "linear" or "Slerp"
         public Move(MoveJson json)
         {
             moveId = json.moveId;
@@ -66,19 +68,21 @@ public class DroneController : MonoBehaviour
         public string rotationType;
     }
 
-    public readonly struct BrakingManeuver
+    [System.Serializable]
+    public struct BrakingManeuver
     {
-        public readonly Quaternion rotation;
-        public readonly float duration;
-        public readonly float outwardMove;
+        public Quaternion rotation;
+        public float duration;
+        public float outwardMove;
     }
 
-    public readonly struct DeploymentAction
+    [System.Serializable]
+    public struct DeploymentAction
     {
-        public readonly string action;
-        public readonly int activationNode;
-        public readonly float startDelay;
-        public readonly float duration;
+        public string action;
+        public int activationNode;
+        public float startDelay;
+        public float duration;
     }
 
     public enum AccelerationType
@@ -95,11 +99,12 @@ public class DroneController : MonoBehaviour
         Slerp
     }
 
-    // Allowed interpolation methods
-    private static readonly HashSet<string> allowedRotationTypes = new HashSet<string>{ "linear", "slerp" };
+    public bool debug = true;
 
     void Awake()
     {
+        droneActions = "temp"; // hard-coded during testing
+
         SetState(ControllerState.InitializingController);
         StartCoroutine(InitializeDroneActions());
     }
@@ -110,11 +115,29 @@ public class DroneController : MonoBehaviour
         {
             case ControllerState.InitializingController: break;
             case ControllerState.Forward:
-                //
+                elapsedTime += Time.deltaTime;
+                segmentTimer += Time.deltaTime;
+
+                float fac = segmentTimer / segmentDuration;
+                fac = Mathf.Clamp01(fac);
+
+                transform.position = Vector3.Lerp(moves[currentNodeIndex - 1].position, moves[currentNodeIndex].position, fac);
+                
+                if (fac >= 1)
+                {
+                    fac = 0; segmentTimer = 0;
+                    if (currentNodeIndex + 1 < moves.Count)
+                        currentNodeIndex++;
+                    else
+                        SetState(ControllerState.StabilizingFromStop);
+                }
+                
                 break;
             case ControllerState.StabilizingFromStop:
+                elapsedTime += Time.deltaTime;
                 break;
             case ControllerState.Idle:
+                elapsedTime += Time.deltaTime;
                 break;
         }
     }
@@ -123,7 +146,13 @@ public class DroneController : MonoBehaviour
     /*Extract drone path data from JSON*/
     {
         // 1) Extract data from json
-        string path = System.IO.Path.Combine(droneActionsPath, System.String.Concat(droneActions, ".json"));
+        string path = System.IO.Path.Combine(
+            Application.streamingAssetsPath,
+            "DroneActions",
+            droneActions + ".json"
+        );
+
+        path = "file://" + path;
 
         UnityWebRequest request = UnityWebRequest.Get(path);
         yield return request.SendWebRequest();
@@ -139,9 +168,11 @@ public class DroneController : MonoBehaviour
             JsonUtility.FromJson<DroneActions>(
                 request.downloadHandler.text
             );
+        if (debug) Debug.Log("DroneController finished parsing JSON");
 
-        // 2) Validation - fail = delete this drone to avoid crashes
-        if (!ValidateDroneActions())
+        // 2) Validation: fail = delete this drone to avoid crashes
+        moves = new List<Move>(actions.movements.Length);
+        if (!ValidateDroneActions(actions)) // TODO: fix validation, it does nothing right now
         {
             Debug.LogError($"DroneController on {name} received invalid action data. Destroying drone.");
             Destroy(gameObject);
@@ -149,17 +180,17 @@ public class DroneController : MonoBehaviour
         }
 
         // 3) Cache the data we need
-        moves = new List<Move>(actions.moves.Length);
-        foreach (var m in actions.moves)
+        foreach (var m in actions.movements)
             moves.Add(new Move(m));
         brakingManeuvers = new List<BrakingManeuver>(actions.brakingManeuvers);
         deploymentActions = new List<DeploymentAction>(actions.deploymentActions);
 
         // 4) Done initializing
+        if (debug) Debug.Log("DroneController finished initialization");
         SetState(ControllerState.Forward);
     }
 
-    private bool ValidateDroneActions()
+    private bool ValidateDroneActions(DroneActions actions)
     {
         // 1) Interpolation methods must be valid
         for (int i = 0; i < moves.Count; i++)
@@ -177,6 +208,7 @@ public class DroneController : MonoBehaviour
             }
         }
 
+        if (debug) Debug.Log("DroneController passed droneActions validation");
         return true;
     }
 
@@ -190,5 +222,5 @@ public class DroneController : MonoBehaviour
         }
     }
 
-    private void SetState(ControllerState newState){ currentState = newState; }
+    private void SetState(ControllerState newState){ if (debug) Debug.Log($"DroneController went from {currentState} to {newState}"); currentState = newState; }
 }
