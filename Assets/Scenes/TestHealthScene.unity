@@ -525,6 +525,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1091484981753174827, guid: f4afa433567604c41925f304aa343e9a, type: 3}
+      propertyPath: preferredTargetName
+      value: minitank-v10-green t2
+      objectReference: {fileID: 0}
     - target: {fileID: 3247923120125761810, guid: f4afa433567604c41925f304aa343e9a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 100.25457
