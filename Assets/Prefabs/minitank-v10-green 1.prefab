@@ -320,11 +320,27 @@ MonoBehaviour:
   aimDeltaAction: {fileID: 5891516213317709028, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   aimSensitivity: 1
   turretTurnSpeed: 55
+  clampYawRate: 0
+  maxYawRate: 180
   turretTransform: {fileID: 852596438122365689}
   cannonTransform: {fileID: 8130457745370928924}
   turretYawAxis: 1
+  yawInParentSpace: 1
+  stabilizeVisualPivot: 1
   autoResolveAimAxis: 1
   manualLocalAimAxis: {x: 0, y: 0, z: 1}
+  mainCamera: {fileID: 0}
+  targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  losBlockerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxCameraDistance: 1000
+  ignoreLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  useWeaponForwardAsPrimary: 1
 --- !u!1 &6443556736893213931
 GameObject:
   m_ObjectHideFlags: 0
@@ -483,7 +499,7 @@ GameObject:
   - component: {fileID: 2166778791811271157}
   m_Layer: 6
   m_Name: minitank-v10-green 1
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -962,10 +978,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   lookAction: {fileID: 2948036706600790992, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   followTarget: {fileID: 5815115966685305185}
-  offset: {x: 0, y: 25, z: -25}
+  preferredTargetName: minitank-v10-green 1
+  forcePreferredTarget: 1
+  enableOnlyOnPreferredTank: 1
+  offset: {x: 0, y: 14, z: -42}
   rotationSpeed: 50
-  minPitch: 75
-  maxPitch: 125
+  minPitch: -8
+  maxPitch: 35
+  lookAtHeight: 1.25
+  invertLookY: 1
 --- !u!1 &8384279126167871198
 GameObject:
   m_ObjectHideFlags: 0
