@@ -1,7 +1,5 @@
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
-
 
 public class TankController : MonoBehaviour
 {
@@ -39,10 +37,10 @@ public class TankController : MonoBehaviour
 
         SwitchToTurret(turretIndex);
 
-        if (tankSlope != null)
-        {
-            tankSlope.tankRoot = transform;  // Pass root reference
-        }
+    if (tankSlope != null)
+    {
+        tankSlope.tankRoot = transform;  // Pass root reference
+    }
     }
 
     public void OnMove(InputAction.CallbackContext context)

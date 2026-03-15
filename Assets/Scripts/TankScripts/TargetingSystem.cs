@@ -5,14 +5,11 @@ using UnityEngine;
 /// 1. Casts from camera forward to find nominal target
 /// 2. Casts from weapon to that target to check line-of-sight
 /// 3. Provides actual valid target position
-/// 
-/// 
 /// </summary>
 public class TargetingSystem : MonoBehaviour
 {
     [Tooltip("Main camera (auto-found if not assigned)")]
-    [SerializeField] private Camera mainCamera; 
-    //
+    [SerializeField] private Camera mainCamera;
     
     [Tooltip("Weapon/cannon transform for line-of-sight check")]
     [SerializeField] private Transform weaponTransform;

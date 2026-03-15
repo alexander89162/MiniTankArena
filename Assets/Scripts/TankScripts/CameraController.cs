@@ -3,7 +3,6 @@ using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour
 {
-    //grabing updated to push to main
     //Sets up look action and transform object to grab
     [SerializeField] InputActionReference lookAction;     
     [SerializeField] Transform followTarget;             
@@ -81,11 +80,11 @@ public class CameraController : MonoBehaviour
         targetYaw = followTarget.eulerAngles.y;
 
         // Accumulate RELATIVE rotations (mouse/stick)
-        yaw += -(look.x * rotationSpeed * Time.deltaTime);
+        yaw += look.x * rotationSpeed * Time.deltaTime;
         float pitchDelta = look.y * rotationSpeed * Time.deltaTime;
         float pitchInput = invertLookY ? -pitchDelta : pitchDelta;
 
-        pitch += -pitchInput;
+        pitch += pitchInput;
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
         // ABSOLUTE rotation: tank yaw + relative camera offset
@@ -95,7 +94,7 @@ public class CameraController : MonoBehaviour
         transform.position = followTarget.position + rot * offset;
 
         // Look at target (slight up bias for better view)
-        transform.LookAt(followTarget.position + (followTarget.up*-1) * lookAtHeight);
+        transform.LookAt(followTarget.position + followTarget.up * lookAtHeight);
     }
 
     void ApplyCameraOwnershipGate()
